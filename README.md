@@ -53,7 +53,7 @@ Tests cover Chromium desktop, tablet, and mobile, including normal-motion handof
 
 - Set the verified contact email in `data/site.ts`. Until then the brief composer only prepares and copies text; nothing is submitted. A configured email opens a draft in the visitor's mail client.
 - Review provisional page copy, stock imagery, and sample concepts. The owner supplied the aggregate “used by millions” positioning; no per-project usage claims have been invented.
-- Set the production domain and canonical/social metadata. Search indexing is intentionally disabled in root metadata until launch review is complete.
+- Set canonical/social metadata for the production domain, temmstech.com. Search indexing was enabled at the owner's request.
 - No backend, analytics, or social accounts are configured.
 
 ## Review deployments
