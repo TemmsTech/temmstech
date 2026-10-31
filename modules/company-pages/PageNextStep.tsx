@@ -15,11 +15,11 @@ export function PageNextStep({
       className="dark-surface bg-background"
       aria-labelledby="next-step-title"
     >
-      <div className="page-container section-space">
-        <h2 id="next-step-title" className="section-title max-w-2xl">
+      <div className="page-container section-space text-center">
+        <h2 id="next-step-title" className="section-title mx-auto max-w-2xl">
           {title}
         </h2>
-        <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
+        <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-muted-foreground">
           {description}
         </p>
         <Button asChild size="lg" className="mt-8">

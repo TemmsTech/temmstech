@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { Arrow } from "@/components/arrow";
 import type { NavItem, Service } from "@/types/content";
 
 type FooterProps = {
@@ -67,7 +68,7 @@ export function Footer({ navigation, services, email }: FooterProps) {
               className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline"
             >
               {email ?? "Start a conversation"}{" "}
-              <span aria-hidden="true">↗</span>
+              <Arrow className="size-4" />
             </a>
           </div>
         </div>
@@ -80,7 +81,7 @@ export function Footer({ navigation, services, email }: FooterProps) {
             href="#top"
             className="inline-flex items-center gap-3 hover:text-brand"
           >
-            Back to top <span aria-hidden="true">↑</span>
+            Back to top <Arrow className="size-4 -rotate-90" />
           </a>
         </div>
       </div>

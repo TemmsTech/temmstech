@@ -19,7 +19,6 @@ export function SectionHeading({
     <div className={cn("mb-12 flex flex-col gap-5", className)}>
       <div>
         <p className="eyebrow mb-5">
-          <span className="mr-3 text-accent-foreground">↗</span>
           {eyebrow}
         </p>
         <h2 id={id} className="section-title max-w-2xl">

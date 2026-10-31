@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import { ImageCard } from "@/components/image-card";
 import { ProjectCard } from "@/components/project-card";
@@ -26,13 +27,14 @@ export function WorkPage() {
             Different worlds. Real websites. Explore what we’ve put out there.
           </p>
           <div
-            className="mt-12 grid grid-cols-3 items-center gap-3 py-6 sm:gap-6"
+            className="work-fan mt-12 grid grid-cols-3 items-center gap-3 py-6 sm:gap-6"
             aria-hidden="true"
           >
             {showcaseProjects.slice(0, 3).map((project, index) => (
               <div
                 key={project.id}
-                className={`relative aspect-[12/7] border border-border bg-card ${index === 0 ? "-rotate-6" : index === 2 ? "rotate-6" : "z-10 scale-110"}`}
+                className="work-fan-card relative aspect-[12/7] border border-border bg-card"
+                style={{ "--i": index } as CSSProperties}
               >
                 <Image
                   src={project.desktopImage}

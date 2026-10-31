@@ -682,3 +682,272 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 .image-tile-shade {
   background: linear-gradient(transparent, var(--ink));
 }
+
+/* Work page hero: three captures fan out of a stack, then respond to hover. */
+.work-fan {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+.work-fan-card {
+  --rest: rotate(-6deg);
+  --lift: rotate(0deg) translateY(-8px) scale(1.04);
+  --from: translate(58%, 20px) rotate(0deg) scale(0.94);
+  transform: var(--rest);
+}
+.work-fan-card:nth-child(2) {
+  --rest: scale(1.1);
+  --lift: translateY(-8px) scale(1.14);
+  --from: translateY(24px) scale(1.02);
+  z-index: 10;
+}
+.work-fan-card:nth-child(3) {
+  --rest: rotate(6deg);
+  --from: translate(-58%, 20px) rotate(0deg) scale(0.94);
+}
+@keyframes work-fan-in {
+  from {
+    opacity: 0;
+    transform: var(--from);
+  }
+  to {
+    opacity: 1;
+    transform: var(--rest);
+  }
+}
+@keyframes work-fan-shake {
+  0%,
+  22%,
+  100% {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+  4% {
+    rotate: -1.4deg;
+    translate: -3px 0;
+  }
+  8% {
+    rotate: 1.4deg;
+    translate: 3px -1px;
+  }
+  12% {
+    rotate: -1deg;
+    translate: -2px 0;
+  }
+  16% {
+    rotate: 0.8deg;
+    translate: 2px 0;
+  }
+  19% {
+    rotate: -0.3deg;
+    translate: -1px 0;
+  }
+}
+@keyframes work-fan-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* "backwards" so the finished state returns to the plain transform and hover can take over */
+  /* The loop uses the separate rotate/translate properties so it composes with the
+     entrance and hover, which both own transform. */
+  .work-fan-card {
+    animation:
+      work-fan-in 700ms var(--ease-out-strong) backwards,
+      work-fan-shake 5s var(--ease-in-out-strong) infinite;
+    animation-delay:
+      calc(var(--i) * 70ms + 120ms),
+      calc(1500ms + var(--i) * 900ms);
+    transition:
+      transform 250ms var(--ease-out-strong),
+      box-shadow 250ms var(--ease-out-strong);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-fan-card {
+    animation: work-fan-fade 300ms ease backwards;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .work-fan-card:hover {
+    transform: var(--lift);
+    box-shadow: var(--card-shadow-raised);
+    z-index: 20;
+    animation-play-state: running, paused;
+  }
+}
+
+/* Contact hero: the three tiles drift up and down out of step, with a slow push-in on each photo. */
+@keyframes contact-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10px);
+  }
+}
+@keyframes contact-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .contact-float > figure {
+    animation: contact-float 4.5s cubic-bezier(0.77, 0, 0.175, 1) infinite
+      alternate;
+  }
+  .contact-float > figure:nth-child(2) {
+    animation-delay: -1.5s;
+  }
+  .contact-float > figure:nth-child(3) {
+    animation-delay: -3s;
+  }
+  .contact-float > figure img {
+    animation: contact-drift 9s cubic-bezier(0.77, 0, 0.175, 1) infinite
+      alternate;
+  }
+}
+
+/* Process spine: steps light up in order, joined by a line that fills between them. */
+.spine {
+  --spine-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  display: grid;
+  gap: 2rem;
+  list-style: none;
+  padding: 0;
+}
+.spine-step {
+  position: relative;
+  padding-left: 2.25rem;
+}
+.spine-dot {
+  position: absolute;
+  top: 0.35rem;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--foreground) 30%, transparent);
+  border-radius: 50%;
+  background: var(--ink);
+  transition:
+    background-color 300ms var(--spine-ease),
+    border-color 300ms var(--spine-ease);
+}
+.spine-dot::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(var(--brand), transparent 70%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 400ms var(--spine-ease),
+    transform 400ms var(--spine-ease);
+}
+.spine-step[data-lit] .spine-dot {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.spine-step[data-lit] .spine-dot::after {
+  opacity: 0.55;
+  transform: scale(1);
+}
+.spine-step > :not(.spine-seg, .spine-dot) {
+  opacity: 0.4;
+  transition: opacity 400ms var(--spine-ease);
+}
+.spine-step[data-lit] > :not(.spine-seg, .spine-dot) {
+  opacity: 1;
+}
+.spine-seg {
+  position: absolute;
+  top: calc(0.35rem + 12px);
+  bottom: calc(0.35rem - 2rem);
+  left: 5px;
+  width: 2px;
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.spine-seg-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--brand), var(--visual-highlight));
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 500ms var(--spine-ease);
+}
+.spine-step[data-next-lit] .spine-seg-fill {
+  transform: scaleY(1);
+}
+@media (min-width: 768px) {
+  .spine {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  .spine-step {
+    padding-top: 2.25rem;
+    padding-left: 0;
+  }
+  .spine-dot {
+    top: 0;
+  }
+  .spine-seg {
+    top: 5px;
+    bottom: auto;
+    left: calc(12px + 0.5rem);
+    right: calc(0.5rem - 1.5rem);
+    width: auto;
+    height: 2px;
+  }
+  .spine-seg-fill {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .spine-step[data-next-lit] .spine-seg-fill {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spine-dot,
+  .spine-dot::after,
+  .spine-seg-fill,
+  .spine-step > :not(.spine-seg, .spine-dot) {
+    transition-duration: 1ms;
+  }
+}
+
+/* Contact reveal: the form slides in from the right when the section opens. */
+@keyframes brief-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes brief-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brief-panel:not([hidden]) {
+    animation: brief-in 420ms cubic-bezier(0.23, 1, 0.32, 1) 120ms backwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brief-panel:not([hidden]) {
+    animation: brief-fade 200ms ease backwards;
+  }
+}

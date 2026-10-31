@@ -39,7 +39,7 @@ export function Hero({
                 className="inline-flex min-h-11 items-center gap-3 text-sm font-medium underline-offset-8 hover:underline"
               >
                 {content.secondaryAction.label}
-                <span aria-hidden="true">↗</span>
+                <Arrow className="size-4" />
               </a>
             </div>
           </div>

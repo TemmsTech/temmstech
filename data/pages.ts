@@ -148,12 +148,12 @@ export const briefPrompts = [
   {
     title: "The situation",
     image: processSteps[1].image,
-    description: "What needs to work better?",
+    description: "What needs to work better, and where is it getting in the way today?",
   },
   {
     title: "The people",
     image: processSteps[0].image,
-    description: "Who are we making it better for?",
+    description: "Who will use it, who is affected, and who needs to be involved?",
   },
   {
     title: "The practical details",

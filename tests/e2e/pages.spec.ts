@@ -88,6 +88,7 @@ test("supporting pages provide their own deeper content", async ({ page }) => {
   ).toBeAttached();
   await expect(page.getByText(/Release checklist/)).toBeAttached();
   await page.goto("/contact");
+  await page.getByRole("button", { name: "Start a conversation" }).click();
   await expect(page.getByLabel("What would you like to solve?")).toBeVisible();
   await page
     .getByLabel("What would you like to solve?")

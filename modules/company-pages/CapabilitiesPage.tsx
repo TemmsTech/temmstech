@@ -1,3 +1,4 @@
+import { Arrow } from "@/components/arrow";
 import { ImageTile } from "@/components/image-tile";
 import { ImageCard } from "@/components/image-card";
 import { SectionNav } from "@/components/section-nav";
@@ -30,7 +31,7 @@ export function CapabilitiesPage() {
               href="#disciplines"
               className="mt-8 inline-flex min-h-12 items-center border-b border-foreground font-semibold"
             >
-              Explore the possibilities ↗
+              Explore the possibilities <Arrow className="ml-2 size-4" />
             </a>
           </div>
           <div className="hero-mosaic">

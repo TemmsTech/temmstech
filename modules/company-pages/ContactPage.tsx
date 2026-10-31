@@ -1,4 +1,5 @@
-import { ProjectBrief } from "@/modules/cta";
+import { Arrow } from "@/components/arrow";
+import { BriefReveal } from "@/modules/cta";
 import { ImageTile } from "@/components/image-tile";
 import { ImageCard } from "@/components/image-card";
 import { SectionNav } from "@/components/section-nav";
@@ -21,9 +22,9 @@ export function ContactPage() {
             href="#contact"
             className="mt-8 inline-flex min-h-12 items-center bg-ink px-6 text-sm font-semibold text-brand"
           >
-            Prepare your brief ↗
+            Prepare your brief <Arrow className="ml-2 size-4" />
           </a>
-          <div className="mt-12 grid grid-cols-3 gap-3 text-left sm:gap-6">
+          <div className="contact-float mt-12 grid grid-cols-3 gap-3 text-left sm:gap-6">
             {briefPrompts.map((prompt, index) => (
               <ImageTile
                 key={prompt.title}
@@ -58,26 +59,7 @@ export function ContactPage() {
           </div>
         </div>
       </section>
-      <section
-        id="contact"
-        className="bg-secondary"
-        aria-labelledby="brief-title"
-      >
-        <div className="page-container section-space">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="eyebrow mb-5 text-accent-foreground">
-              YOUR NEXT STEP
-            </p>
-            <h2 id="brief-title" className="section-title">
-              Put the idea into words.
-            </h2>
-            <p className="mt-5 text-muted-foreground">
-              Start with what you know. We can work through the rest.
-            </p>
-          </div>
-          <ProjectBrief email={contact.email} initiallyOpen />
-        </div>
-      </section>
+      <BriefReveal email={contact.email} />
     </>
   );
 }

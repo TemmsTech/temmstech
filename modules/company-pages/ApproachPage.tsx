@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { ImageCard } from "@/components/image-card";
+import { ProcessSpine } from "@/components/process-spine";
 import { SectionNav } from "@/components/section-nav";
-import { SectionReveal } from "@/components/section-reveal";
 import {
   deliveryStages,
   collaborationNotes,
@@ -51,6 +51,22 @@ export function ApproachPage() {
       </section>
       <SectionNav items={pageSections.approach} />
       <section
+        id="journey"
+        className="dark-surface bg-background"
+        aria-labelledby="journey-title"
+      >
+        <div className="page-container section-space">
+          <p className="eyebrow mb-5 text-brand">WE DON’T STOP AT THE BUILD</p>
+          <h2 id="journey-title" className="section-title max-w-3xl">
+            From first idea to launch,{" "}
+            <span className="text-brand">and beyond.</span>
+          </h2>
+          <div className="mt-14">
+            <ProcessSpine steps={processSteps} />
+          </div>
+        </div>
+      </section>
+      <section
         id="delivery"
         className="bg-background"
         aria-labelledby="delivery-title"
@@ -87,7 +103,6 @@ export function ApproachPage() {
           </ol>
         </div>
       </section>
-      <SectionReveal fromId="delivery" toId="collaboration" />
       <section
         id="collaboration"
         className="bg-secondary"
@@ -111,7 +126,6 @@ export function ApproachPage() {
           </div>
         </div>
       </section>
-      <SectionReveal fromId="collaboration" toId="contact" />
       <PageNextStep
         title="Start with a useful question."
         description="You bring the context. We’ll work through the next step together."
