@@ -22,7 +22,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { drawSectionScreen } from "@/lib/section-screen";
 import { createScreenPortal } from "@/lib/screen-portal";
-import type { ShowcaseProject } from "@/types/showcase";
+import type { CapturedProject } from "@/types/showcase";
 
 export type DeviceScene = {
   setProject: (index: number, animate: boolean) => void;
@@ -56,7 +56,7 @@ function createCanvas(width: number, height: number) {
 
 export async function createDeviceScene(
   host: HTMLElement,
-  projects: readonly ShowcaseProject[],
+  projects: readonly CapturedProject[],
   signal: AbortSignal,
   onContextLost: () => void,
   nextSectionId: string,

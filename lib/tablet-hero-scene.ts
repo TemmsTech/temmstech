@@ -17,7 +17,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { disposeObject } from "@/lib/dispose-object";
 import { createScreenPortal } from "@/lib/screen-portal";
 import type { DeviceScene } from "@/lib/device-scene";
-import type { ShowcaseProject } from "@/types/showcase";
+import type { CapturedProject } from "@/types/showcase";
 
 type Point = { x: number; y: number };
 type Quad = [Point, Point, Point, Point];
@@ -39,7 +39,7 @@ function loadImage(src: string) {
  */
 export async function createTabletHeroScene(
   host: HTMLElement,
-  projects: readonly ShowcaseProject[],
+  projects: readonly CapturedProject[],
   signal: AbortSignal,
   onContextLost: () => void,
   nextSectionId: string,

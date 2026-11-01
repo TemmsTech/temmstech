@@ -1,4 +1,4 @@
-import type { ShowcaseProject } from "@/types/showcase";
+import type { CapturedProject, ShowcaseProject } from "@/types/showcase";
 
 export const showcaseProjects = [
   {
@@ -49,4 +49,23 @@ export const showcaseProjects = [
     desktopImage: "/showcases/makinde-desktop.png",
     mobileImage: "/showcases/makinde-mobile.png",
   },
+  {
+    id: "cmwgtours",
+    title: "CMWG Travel",
+    category: "Travel & tours",
+    url: "https://cmwgtours.netlify.app",
+  },
+  {
+    id: "proximitynews",
+    title: "Proximity News",
+    category: "News",
+    url: "https://proximitynews.netlify.app",
+  },
 ] satisfies readonly ShowcaseProject[];
+
+const hasCaptures = (project: ShowcaseProject): project is CapturedProject =>
+  Boolean(project.desktopImage && project.mobileImage);
+
+/** The 3D hero devices only show projects that have local screenshots. */
+export const heroProjects: readonly CapturedProject[] =
+  showcaseProjects.filter(hasCaptures);

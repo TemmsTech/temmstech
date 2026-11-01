@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import Image from "next/image";
+import { LiveFrame } from "@/components/live-frame";
 import { ProjectCard } from "@/components/project-card";
 import { SectionNav } from "@/components/section-nav";
 import { services } from "@/data/services";
@@ -42,17 +42,10 @@ export function WorkPage() {
             {showcaseProjects.slice(0, 3).map((project, index) => (
               <div
                 key={project.id}
-                className="work-fan-card relative aspect-[12/7] border border-border bg-card"
+                className="work-fan-card relative aspect-[12/7] overflow-hidden border border-border bg-card"
                 style={{ "--i": index } as CSSProperties}
               >
-                <Image
-                  src={project.desktopImage}
-                  alt=""
-                  fill
-                  sizes="33vw"
-                  className="object-cover"
-                  priority={index === 1}
-                />
+                <LiveFrame url={project.url} title={project.title} controls={false} />
               </div>
             ))}
           </div>

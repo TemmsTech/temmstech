@@ -1,5 +1,5 @@
 import { DeviceShowcase } from "@/components/device-showcase";
-import type { ShowcaseProject } from "@/types/showcase";
+import type { CapturedProject } from "@/types/showcase";
 import { Arrow } from "@/components/arrow";
 import { Button } from "@/components/ui/button";
 import type { HeroContent } from "./types";
@@ -12,7 +12,7 @@ export function Hero({
 }: {
   content: HeroContent;
   nextSectionId: string;
-  projects: readonly ShowcaseProject[];
+  projects: readonly CapturedProject[];
 }) {
   return (
     <section

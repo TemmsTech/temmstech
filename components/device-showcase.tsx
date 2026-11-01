@@ -9,10 +9,10 @@ import {
 } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
-import type { ShowcaseProject } from "@/types/showcase";
+import type { CapturedProject } from "@/types/showcase";
 
 type DeviceShowcaseProps = {
-  projects: readonly ShowcaseProject[];
+  projects: readonly CapturedProject[];
   className?: string;
   nextSectionId: string;
 };
