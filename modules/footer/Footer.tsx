@@ -74,9 +74,17 @@ export function Footer({ navigation, services, email }: FooterProps) {
         </div>
         <div className="flex flex-wrap justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} TemmsTech. All rights reserved.</p>
-          <a href="/models/ATTRIBUTION.md" className="hover:text-brand">
-            3D model credits
-          </a>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link href="/privacy" className="hover:text-brand">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-brand">
+              Terms of Use
+            </Link>
+            <a href="/models/ATTRIBUTION.md" className="hover:text-brand">
+              3D model credits
+            </a>
+          </nav>
           <a
             href="#top"
             className="inline-flex items-center gap-3 hover:text-brand"

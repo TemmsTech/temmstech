@@ -1,10 +1,21 @@
 import { Arrow } from "@/components/arrow";
+import { Button } from "@/components/ui/button";
 import { BriefReveal } from "@/modules/cta";
 import { ImageTile } from "@/components/image-tile";
 import { ImageCard } from "@/components/image-card";
 import { SectionNav } from "@/components/section-nav";
-import { briefPrompts, pageIntros, pageSections } from "@/data/pages";
-import { contact } from "@/data/site";
+import {
+  briefPrompts,
+  deliveryStages,
+  pageIntros,
+  pageSections,
+} from "@/data/pages";
+
+// What the work looks like once you have shared your brief: the first stages of
+// our approach, so the contact page never repeats the "what to bring" cards.
+const nextSteps = deliveryStages
+  .slice(0, 3)
+  .map(({ title, description }) => ({ title, description }));
 
 export function ContactPage() {
   return (
@@ -18,12 +29,11 @@ export function ContactPage() {
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8">
             An idea, a challenge, or a better way of doing things.
           </p>
-          <a
-            href="#contact"
-            className="mt-8 inline-flex min-h-12 items-center bg-ink px-6 text-sm font-semibold text-brand"
-          >
-            Prepare your brief <Arrow className="ml-2 size-4" />
-          </a>
+          <Button asChild size="lg" variant="ink" className="mt-8">
+            <a href="#contact">
+              Prepare your brief <Arrow />
+            </a>
+          </Button>
           <div className="contact-float mt-12 grid grid-cols-3 gap-3 text-left sm:gap-6">
             {briefPrompts.map((prompt, index) => (
               <ImageTile
@@ -59,7 +69,7 @@ export function ContactPage() {
           </div>
         </div>
       </section>
-      <BriefReveal email={contact.email} />
+      <BriefReveal points={nextSteps} />
     </>
   );
 }

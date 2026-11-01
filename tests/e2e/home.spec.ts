@@ -43,9 +43,7 @@ test("homepage explains the company, shows its imagery, and reaches each section
   expect(errors).toEqual([]);
 });
 
-test("hero title and supporting copy scramble and settle", async ({
-  page,
-}) => {
+test("hero title and supporting copy scramble and settle", async ({ page }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
@@ -54,18 +52,15 @@ test("hero title and supporting copy scramble and settle", async ({
     "aria-label",
     "Built by us. Used by millions.",
   );
-  await expect(heading.locator('span[aria-hidden="true"]').first()).toContainText(
-    "Made to work.",
-    { timeout: 20000 },
-  );
-  await expect(page.locator(".hero-description > span:first-child")).toContainText(
-    "Across web platforms, mobile apps",
-    { timeout: 20000 },
-  );
-  await expect(heading.locator('span[aria-hidden="true"]').first()).toContainText(
-    "Code. Craft. AI.",
-    { timeout: 20000 },
-  );
+  await expect(
+    heading.locator('span[aria-hidden="true"]').first(),
+  ).toContainText("Made to work.", { timeout: 20000 });
+  await expect(
+    page.locator(".hero-description > span:first-child"),
+  ).toContainText("Across web platforms, mobile apps", { timeout: 20000 });
+  await expect(
+    heading.locator('span[aria-hidden="true"]').first(),
+  ).toContainText("Code. Craft. AI.", { timeout: 20000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(heading).toHaveText("Built by us. Used by millions.");
 });
@@ -129,11 +124,7 @@ test("sample concepts disclose their scope", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("visitors can prepare a brief without a false submission", async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+test("visitors can send a brief with a way to be reached", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Build with TemmsTech" }).click();
   await expect(page).toHaveURL(/#contact$/);
@@ -141,23 +132,52 @@ test("visitors can prepare a brief without a false submission", async ({
     .locator("#contact")
     .getByText("Start a conversation", { exact: true })
     .click();
+  const panel = page.locator("#contact-panel");
+  const height = (await panel.boundingBox())?.height;
   await page
     .getByLabel("What would you like to solve?")
     .fill("We need to connect our stock and ordering systems.");
-  const copy = page.getByRole("button", { name: "Copy project brief" });
-  if (await copy.isVisible()) {
-    await copy.click();
-    await expect(page.locator("#contact").getByRole("status")).toContainText(
-      "Brief copied.",
-    );
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-      "We need to connect our stock and ordering systems.",
-    );
-  } else {
-    await expect(
-      page.getByRole("link", { name: "Open email draft" }),
-    ).toHaveAttribute("href", /^mailto:.+body=We/);
-  }
+  await page.getByLabel("How can we reach you?").fill("not-a-contact");
+  await panel.getByRole("button", { name: "Send project brief" }).click();
+  await expect(panel.getByRole("status")).toContainText(
+    "email address or phone number",
+  );
+  await page.getByLabel("How can we reach you?").fill("ada@example.com");
+  await panel.getByRole("button", { name: "Send project brief" }).click();
+  await expect(panel.getByRole("status")).toContainText("Thank you", {
+    timeout: 5000,
+  });
+  await expect(page.getByLabel("What would you like to solve?")).toHaveValue(
+    "",
+  );
+  expect((await panel.boundingBox())?.height).toBe(height);
+});
+
+test("legal pages are linked from the footer", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.getByRole("contentinfo");
+  await footer.getByRole("link", { name: "Privacy Policy" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Privacy Policy",
+  );
+  const contents = page.getByRole("button", { name: /On this page/ });
+  if (await contents.isVisible()) await contents.click();
+  const rights = page
+    .getByRole("navigation", { name: "On this page" })
+    .getByRole("link", { name: /Your rights/ });
+  await rights.click();
+  await expect(page.locator("#rights")).toBeInViewport();
+  if (!(await contents.isVisible()))
+    await expect(rights).toHaveAttribute("aria-current", "location");
+  await page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Terms of Use" })
+    .click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Terms of Use",
+  );
 });
 
 test("navbar hides on scroll down and reveals on scroll up", async ({

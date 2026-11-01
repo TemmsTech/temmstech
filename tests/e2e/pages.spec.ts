@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const [path, title] of [
   ["capabilities", "Big ideas need more than one kind of thinking."],
   ["work", "Ideas, out in the world."],
-  ["approach", "From the first question to the next release."],
+  ["approach", "From the first idea, To launch & beyond."],
   ["contact", "Your next idea starts with a conversation."],
 ]) {
   test(`${path} page loads directly and links home`, async ({ page }) => {
@@ -94,7 +94,7 @@ test("supporting pages provide their own deeper content", async ({ page }) => {
     .getByLabel("What would you like to solve?")
     .fill("A clearer ordering workflow.");
   await expect(
-    page.getByRole("button", { name: "Copy project brief" }),
+    page.getByRole("button", { name: "Send project brief" }),
   ).toBeEnabled();
 });
 

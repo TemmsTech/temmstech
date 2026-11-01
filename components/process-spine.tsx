@@ -67,10 +67,10 @@ export function ProcessSpine({ steps }: { steps: readonly SpineStep[] }) {
           <span className="eyebrow block text-[0.65rem]">
             0{index + 1}
           </span>
-          <h3 className="mt-1 text-lg font-semibold tracking-tight">
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">
             {step.title}
-          </h3>
-          <p className="spine-copy mt-2 text-sm leading-6 text-muted-foreground">
+          </h2>
+          <p className="spine-copy mt-2 text-base leading-7 text-muted-foreground">
             {step.description}
           </p>
         </li>

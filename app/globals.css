@@ -476,7 +476,7 @@
 }
 
 .hero-primary {
-  box-shadow: var(--hero-action-shadow);
+  --btn-glow: var(--hero-action-shadow);
 }
 .hero-artwork {
   animation: artwork-enter 900ms ease-out both;
@@ -659,8 +659,40 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   color: var(--card-accent);
   font-weight: 600;
 }
+.side-toc-link {
+  border-left: 2px solid transparent;
+  color: var(--muted-foreground);
+  transition:
+    color 150ms,
+    border-color 150ms;
+}
+.side-toc-link:hover {
+  color: var(--foreground);
+}
+.side-toc-link[aria-current="location"] {
+  border-left-color: var(--card-accent);
+  color: var(--card-accent);
+  font-weight: 600;
+}
+.side-toc {
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+}
+.side-toc ul {
+  border-left: 1px solid var(--border);
+}
+.side-toc .side-toc-link {
+  margin-left: -1px;
+}
 .section-nav ~ section[id] {
   scroll-margin-top: 5rem;
+}
+/* Land flush under the pinned section nav (4rem bar + 2px borders), so the
+   section fills the screen and nothing of the previous section shows. The
+   negative margin cancels the 6.5rem html scroll-padding. */
+.section-nav ~ section.fill-below-nav {
+  scroll-margin-top: calc(4.125rem - 6.5rem);
+  min-height: calc(100dvh - 4.125rem);
 }
 .hero-photo-shade {
   background: linear-gradient(
@@ -814,11 +846,12 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   }
 }
 
-/* Process spine: steps light up in order, joined by a line that fills between them. */
+/* Process spine: a vertical line of steps that light up in order as it fills. */
 .spine {
   --spine-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --spine-gap: 3rem;
   display: grid;
-  gap: 2rem;
+  gap: var(--spine-gap);
   list-style: none;
   padding: 0;
 }
@@ -869,7 +902,7 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 .spine-seg {
   position: absolute;
   top: calc(0.35rem + 12px);
-  bottom: calc(0.35rem - 2rem);
+  bottom: calc(0.35rem - var(--spine-gap));
   left: 5px;
   width: 2px;
   background: color-mix(in srgb, var(--foreground) 14%, transparent);
@@ -885,34 +918,6 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 .spine-step[data-next-lit] .spine-seg-fill {
   transform: scaleY(1);
 }
-@media (min-width: 768px) {
-  .spine {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 1.5rem;
-  }
-  .spine-step {
-    padding-top: 2.25rem;
-    padding-left: 0;
-  }
-  .spine-dot {
-    top: 0;
-  }
-  .spine-seg {
-    top: 5px;
-    bottom: auto;
-    left: calc(12px + 0.5rem);
-    right: calc(0.5rem - 1.5rem);
-    width: auto;
-    height: 2px;
-  }
-  .spine-seg-fill {
-    transform: scaleX(0);
-    transform-origin: left;
-  }
-  .spine-step[data-next-lit] .spine-seg-fill {
-    transform: scaleX(1);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .spine-dot,
   .spine-dot::after,
@@ -920,6 +925,133 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   .spine-step > :not(.spine-seg, .spine-dot) {
     transition-duration: 1ms;
   }
+}
+
+/* Form panel: a deep navy card. It is opaque, with no blur or saturation, so
+   it never glows against the bright brand-blue section. The card tokens are
+   re-pointed to light-on-dark values so everything inside it (labels, fields,
+   muted text, focus ring) follows without per-element overrides. */
+.glass-panel {
+  --card-ink: #f5f5f5;
+  --card-muted: #aab9cb;
+  --card-accent: var(--brand);
+  position: relative;
+  border-radius: 1.75rem;
+  border: 1px solid transparent;
+  /* Layers, top to bottom: a soft light pooled at the top-left, the navy body
+     fading darker toward the bottom, then a hairline edge that catches light on
+     the upper-left and fades out (the border-box layer). */
+  background:
+    radial-gradient(
+        120% 70% at 12% 0%,
+        rgb(255 255 255 / 0.11),
+        transparent 60%
+      )
+      padding-box,
+    linear-gradient(165deg, #1b3150 0%, #11213a 50%, #0a1424 100%) padding-box,
+    linear-gradient(
+        150deg,
+        rgb(255 255 255 / 0.38),
+        rgb(255 255 255 / 0.06) 35%,
+        rgb(255 255 255 / 0.04) 65%,
+        rgb(255 255 255 / 0.18)
+      )
+      border-box;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 1px 1px #0000001f,
+    0 3px 6px #07111f26,
+    0 12px 24px #07111f33,
+    0 28px 56px #07111f40,
+    0 56px 110px #07111f4d;
+  color: var(--card-ink);
+}
+.glass-muted {
+  color: var(--card-muted);
+}
+.glass-field {
+  display: block;
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 0.875rem;
+  background: rgb(0 0 0 / 0.26);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+  color: var(--card-ink);
+  box-shadow:
+    inset 0 2px 4px #00000066,
+    0 1px 0 rgb(255 255 255 / 0.07);
+  transition:
+    border-color 150ms,
+    background-color 150ms,
+    box-shadow 150ms;
+}
+.glass-field::placeholder {
+  color: var(--card-muted);
+}
+.glass-field:focus {
+  border-color: var(--card-accent);
+  background: rgb(0 0 0 / 0.34);
+  box-shadow:
+    inset 0 2px 4px #00000066,
+    0 0 0 4px color-mix(in srgb, var(--card-accent) 25%, transparent);
+}
+.glass-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+}
+.glass-chip:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.glass-lift {
+  transition:
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .glass-lift:hover,
+  .glass-lift:focus-within {
+    transform: translateY(-6px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 2px 2px #0000001f,
+      0 6px 12px #07111f2e,
+      0 20px 40px #07111f40,
+      0 44px 80px #07111f4d,
+      0 80px 140px #07111f59;
+  }
+}
+.glass-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  cursor: pointer;
+  place-items: center;
+  border: 1px solid rgb(248 113 113 / 0.4);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.06);
+  color: #f87171;
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    color 150ms;
+}
+.glass-close:hover,
+.glass-close:active {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
 }
 
 /* Contact reveal: the form slides in from the right when the section opens. */
@@ -945,9 +1077,277 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   .brief-panel:not([hidden]) {
     animation: brief-in 420ms cubic-bezier(0.23, 1, 0.32, 1) 120ms backwards;
   }
+  .brief-points {
+    animation: brief-fade 420ms ease 240ms backwards;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .brief-panel:not([hidden]) {
     animation: brief-fade 200ms ease backwards;
+  }
+}
+
+/* Physical buttons. Light falls from above: a bright top edge, a darker
+   underside, a hairline rim and a soft drop shadow. Pressing pushes the button
+   in: it moves down, darkens, and the shadow turns inward. */
+@layer components {
+  .btn {
+    --btn-light: 18%;
+    --btn-dark: 16%;
+    --btn-glow: 0 0 #0000;
+    --btn-sheen: 0.16;
+    --btn-hl: 0.42;
+    --btn-drop: 0 0 #0000;
+    --btn-edge: color-mix(in srgb, var(--btn-base) 50%, black);
+    color: var(--btn-fg);
+    background:
+      linear-gradient(
+        180deg,
+        rgb(255 255 255 / var(--btn-sheen)) 0%,
+        rgb(255 255 255 / 0) 52%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--btn-base), white var(--btn-light)) 0%,
+        var(--btn-base) 48%,
+        color-mix(in srgb, var(--btn-base), black var(--btn-dark)) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / var(--btn-hl)),
+      inset 0 -1px 0 rgb(0 0 0 / 0.22),
+      0 0 0 1px var(--btn-edge),
+      0 1px 1px rgb(0 0 0 / 0.14),
+      0 4px 10px -2px rgb(0 0 0 / 0.28),
+      var(--btn-drop),
+      var(--btn-glow);
+    transition:
+      transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      filter 160ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .btn:where(:not(:disabled)) {
+    cursor: pointer;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:where(:not(:disabled)):hover {
+      filter: brightness(1.07);
+    }
+  }
+  .btn:where(:not(:disabled)):active {
+    transform: translateY(1px) scale(0.985);
+    filter: brightness(0.94);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--btn-base), black 18%) 0%,
+      color-mix(in srgb, var(--btn-base), black 5%) 100%
+    );
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.42),
+      inset 0 0 0 1px rgb(0 0 0 / 0.08),
+      inset 0 -1px 0 rgb(255 255 255 / 0.14),
+      0 0 0 1px var(--btn-edge),
+      0 1px 0 rgb(255 255 255 / 0.2),
+      var(--btn-glow);
+    transition-duration: 70ms;
+  }
+  .btn:disabled {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 0 0 1px var(--btn-edge);
+  }
+  /* Black buttons take no light on top: a flat face that sits on its shadow. */
+  .btn-default,
+  .btn-ink {
+    --btn-light: 0%;
+    --btn-sheen: 0;
+    --btn-hl: 0;
+    --btn-edge: rgb(0 0 0 / 0.55);
+    --btn-drop: 0 8px 18px -6px rgb(0 0 0 / 0.45);
+  }
+  .btn-default {
+    --btn-base: var(--primary);
+    --btn-fg: var(--primary-foreground);
+  }
+  .btn-ink {
+    --btn-base: var(--ink);
+    --btn-fg: var(--brand);
+  }
+  /* On dark sections the default button is bright cyan, which does catch light. */
+  .dark-surface .btn-default {
+    --btn-light: 18%;
+    --btn-sheen: 0.16;
+    --btn-hl: 0.42;
+    --btn-edge: color-mix(in srgb, var(--btn-base) 50%, black);
+    --btn-drop: 0 0 #0000;
+  }
+  .btn-destructive {
+    --btn-base: var(--destructive);
+    --btn-fg: var(--destructive-foreground);
+  }
+  .btn-secondary {
+    --btn-base: var(--secondary);
+    --btn-fg: var(--secondary-foreground);
+    --btn-light: 55%;
+    --btn-dark: 7%;
+    --btn-edge: color-mix(in srgb, var(--foreground) 18%, transparent);
+  }
+  .btn-outline {
+    --btn-base: var(--background);
+    --btn-fg: var(--foreground);
+    --btn-light: 70%;
+    --btn-dark: 6%;
+    --btn-edge: color-mix(in srgb, var(--foreground) 22%, transparent);
+  }
+  .dark-surface .btn-outline,
+  .dark-surface .btn-secondary {
+    --btn-light: 12%;
+    --btn-dark: 35%;
+  }
+  /* Form tags are small buttons: raised at rest, pressed in on click, and a
+     chosen tag stays pressed in, dark, like a key held down. */
+  .glass-chip:has(:checked) {
+    --btn-base: var(--ink);
+    --btn-fg: var(--brand);
+    --btn-edge: rgb(0 0 0 / 0.55);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ink), black 28%) 0%,
+      var(--ink) 100%
+    );
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.55),
+      inset 0 0 0 1px rgb(0 0 0 / 0.1),
+      0 0 0 1px var(--btn-edge),
+      0 1px 0 rgb(255 255 255 / 0.7);
+    transform: translateY(1px);
+  }
+  /* On the dark panel a pressed tag is brand-tinted, since ink on navy would vanish. */
+  .glass-panel .glass-chip:has(:checked) {
+    --btn-fg: var(--brand);
+    background: color-mix(in srgb, var(--brand) 16%, #0b1626);
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.5),
+      0 0 0 1px var(--brand);
+  }
+  .glass-close:active {
+    transform: translateY(1px) scale(0.97);
+  }
+}
+
+/* Button hover behaviour. Every button answers the pointer:
+   - solid buttons send out a soft pulse ring and nudge their arrow,
+   - destructive, icon and close buttons shake instead,
+   - ghost buttons and form tags lift slightly.
+   The pulse lives on ::after and the shake uses the individual `translate`
+   property, so neither fights the press-in (`transform`) or the button's own
+   box-shadow. Gated to fine-pointer hover and no reduced-motion preference. */
+@keyframes btn-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14, 1.4);
+  }
+}
+@keyframes btn-shake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  18% {
+    translate: -3px 0;
+  }
+  36% {
+    translate: 3px 0;
+  }
+  54% {
+    translate: -2px 0;
+  }
+  72% {
+    translate: 2px 0;
+  }
+  88% {
+    translate: -1px 0;
+  }
+}
+@keyframes btn-wiggle {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: -6deg;
+  }
+  50% {
+    rotate: 5deg;
+  }
+  75% {
+    rotate: -3deg;
+  }
+}
+
+.btn,
+.glass-close {
+  position: relative;
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--btn-pulse, var(--brand));
+  opacity: 0;
+  pointer-events: none;
+}
+.btn-secondary,
+.btn-outline {
+  --btn-pulse: color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+.btn-destructive {
+  --btn-pulse: var(--destructive);
+}
+.btn-default,
+.btn-ink {
+  --btn-pulse: var(--brand);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-arrow] {
+    transition: translate 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .btn:where(:not(:disabled)):hover [data-arrow] {
+    translate: 4px 0;
+  }
+  .btn:where(:not(:disabled)):hover::after {
+    animation: btn-pulse 900ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
+  }
+  .btn-destructive:where(:not(:disabled)):hover::after {
+    animation: none;
+  }
+  .btn-destructive:where(:not(:disabled)):hover,
+  .glass-close:hover {
+    animation: btn-shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  /* Icon-only buttons (menu toggle) have no label to pulse around: wiggle the glyph. */
+  .btn:where(:not(:disabled)):hover > svg:only-child {
+    animation: btn-wiggle 500ms ease-in-out;
+  }
+  .btn:where(:not(:disabled)):hover:has(> svg:only-child)::after {
+    animation: none;
+  }
+  .glass-chip:hover {
+    translate: 0 -2px;
+  }
+  .glass-chip.btn {
+    transition:
+      transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      translate 180ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      filter 160ms ease-out;
   }
 }

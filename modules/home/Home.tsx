@@ -10,10 +10,10 @@ import {
   portfolioIntro,
   processIntro,
   contactIntro,
+  contactPoints,
 } from "@/data/page";
 import { services } from "@/data/services";
 import { processSteps } from "@/data/approach";
-import { contact } from "@/data/site";
 import { showcaseProjects } from "@/data/device-showcase";
 export function Home() {
   return (
@@ -31,7 +31,10 @@ export function Home() {
         batchSize={4}
       />
       <Process intro={processIntro} steps={processSteps} />
-      <Cta intro={contactIntro} email={contact.email} />
+      <Cta
+        intro={contactIntro}
+        points={contactPoints}
+      />
     </>
   );
 }
