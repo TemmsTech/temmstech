@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { Arrow } from "@/components/arrow";
+import { ContactLink } from "@/components/contact-link";
 import type { NavItem, Service } from "@/types/content";
 
 type FooterProps = {
@@ -63,13 +64,18 @@ export function Footer({ navigation, services, email }: FooterProps) {
               <br />
               or a better way forward.
             </p>
-            <a
-              href={email ? `mailto:${email}` : "/contact"}
-              className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline"
-            >
-              {email ?? "Start a conversation"}{" "}
-              <Arrow className="size-4" />
-            </a>
+            {email ? (
+              <a
+                href={`mailto:${email}`}
+                className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline"
+              >
+                {email} <Arrow className="size-4" />
+              </a>
+            ) : (
+              <ContactLink className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline">
+                Start a conversation <Arrow className="size-4" />
+              </ContactLink>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">

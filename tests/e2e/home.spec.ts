@@ -118,9 +118,14 @@ test("sample concepts disclose their scope", async ({ page }) => {
   const concept = page.getByRole("article").filter({
     has: page.getByRole("heading", { name: "A better way to sell." }),
   });
-  await concept.getByText(/Explore the idea/).click();
+  await concept.getByRole("button", { name: /Explore the idea/ }).click();
+  const section = page.locator("#concepts");
   await expect(
-    concept.getByText(/not a delivered client project/),
+    section.getByText(/not a delivered client project/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close concept" }).click();
+  await expect(
+    section.getByRole("heading", { name: "Not every idea is a live project." }),
   ).toBeVisible();
 });
 
@@ -128,10 +133,6 @@ test("visitors can send a brief with a way to be reached", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Build with TemmsTech" }).click();
   await expect(page).toHaveURL(/#contact$/);
-  await page
-    .locator("#contact")
-    .getByText("Start a conversation", { exact: true })
-    .click();
   const panel = page.locator("#contact-panel");
   const height = (await panel.boundingBox())?.height;
   await page

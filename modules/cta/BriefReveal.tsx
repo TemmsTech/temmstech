@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Arrow } from "@/components/arrow";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { observeSectionNavigation } from "@/lib/section-navigation";
 import { BriefForm } from "./ProjectBrief";
 
 const EASE = "cubic-bezier(0.77, 0, 0.175, 1)";
@@ -42,10 +43,10 @@ export function BriefReveal({
   const before = useRef<DOMRect | null>(null);
   const mounted = useRef(false);
 
-  function change(next: boolean) {
+  const change = useCallback((next: boolean) => {
     before.current = textRef.current?.getBoundingClientRect() ?? null;
     setOpen(next);
-  }
+  }, []);
 
   // Slide the text block from where it was to where it now sits.
   useLayoutEffect(() => {
@@ -72,6 +73,27 @@ export function BriefReveal({
     );
   }, [open]);
 
+  // Any link to this section's hash (#contact) means the visitor wants to share
+  // their idea: open the form. Arriving from another page with the hash, bring
+  // the section into view too, since the page may have reset to the top.
+  useEffect(() => {
+    const reveal = () => {
+      change(true);
+      requestAnimationFrame(() => {
+        const reduced = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        sectionRef.current?.scrollIntoView({
+          behavior: reduced ? "auto" : "smooth",
+          block: "start",
+        });
+      });
+    };
+    const stop = observeSectionNavigation(id, () => change(true));
+    if (location.hash === `#${id}`) requestAnimationFrame(reveal);
+    return stop;
+  }, [id, change]);
+
   function close() {
     change(false);
     requestAnimationFrame(() => buttonRef.current?.focus());
@@ -94,7 +116,7 @@ export function BriefReveal({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, change]);
 
   return (
     <section

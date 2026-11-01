@@ -23,7 +23,7 @@ export function PageNextStep({
           {description}
         </p>
         <Button asChild size="lg" className="mt-8">
-          <Link href="/contact">
+          <Link href="/contact#contact">
             Tell us about your project <Arrow />
           </Link>
         </Button>

@@ -88,7 +88,7 @@ test("supporting pages provide their own deeper content", async ({ page }) => {
   ).toBeAttached();
   await expect(page.getByText(/Release checklist/)).toBeAttached();
   await page.goto("/contact");
-  await page.getByRole("button", { name: "Start a conversation" }).click();
+  await page.getByRole("link", { name: /Prepare your brief/ }).click();
   await expect(page.getByLabel("What would you like to solve?")).toBeVisible();
   await page
     .getByLabel("What would you like to solve?")
@@ -132,4 +132,14 @@ test("navbar navigation starts each destination at the top", async ({
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await expect(page.getByRole("heading", { level: 1 })).toBeInViewport();
   }
+});
+
+test("start links open the nearest brief form", async ({ page }) => {
+  await page.goto("/approach");
+  await page.getByRole("link", { name: /Tell us about your project/ }).click();
+  await expect(page).toHaveURL(/\/contact#contact$/);
+  await expect(page.getByLabel("What would you like to solve?")).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("link", { name: /Let’s talk/ }).click();
+  await expect(page).toHaveURL(/\/contact$/);
 });

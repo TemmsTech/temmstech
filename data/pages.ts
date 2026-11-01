@@ -43,7 +43,8 @@ export const capabilityDetails = [
   {
     title: "Experiences people use",
     image: services[0].image,
-    description: "Interfaces that make the everyday feel effortless.",
+    description:
+      "Interfaces that make the everyday feel effortless, clear to use and quick to love.",
     examples: [
       "Websites and commerce",
       "Mobile and web applications",
@@ -53,7 +54,8 @@ export const capabilityDetails = [
   {
     title: "Systems behind the experience",
     image: services[4].image,
-    description: "Tools, data, and workflows that work together.",
+    description:
+      "Tools, data, and workflows that work together, so your team can move without friction.",
     examples: [
       "Custom business software",
       "Integrations and workflow automation",

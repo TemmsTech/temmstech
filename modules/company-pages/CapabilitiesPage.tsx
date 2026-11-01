@@ -9,6 +9,7 @@ import {
   pageSections,
 } from "@/data/pages";
 import { services } from "@/data/services";
+import { capabilityHeroSlides } from "@/data/hero-slides";
 import { PageNextStep } from "./PageNextStep";
 
 export function CapabilitiesPage() {
@@ -37,13 +38,21 @@ export function CapabilitiesPage() {
           <div className="hero-mosaic">
             <ImageTile
               image={services[0].image}
+              images={capabilityHeroSlides.digital}
               caption="Digital experiences"
               priority
             />
-            <ImageTile image={services[2].image} caption="Connected hardware" />
+            <ImageTile
+              image={services[2].image}
+              images={capabilityHeroSlides.hardware}
+              caption="Connected hardware"
+              slideDelay={1700}
+            />
             <ImageTile
               image={services[3].image}
+              images={capabilityHeroSlides.ai}
               caption="Applied intelligence"
+              slideDelay={3400}
             />
           </div>
         </div>
@@ -65,7 +74,7 @@ export function CapabilitiesPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             {capabilityDetails.map((detail) => (
               <ImageCard key={detail.title} {...detail}>
-                <ul className="mt-6 space-y-3 border-t border-border pt-5">
+                <ul className="mt-6 list-disc space-y-3 border-t border-border pt-5 pl-5 marker:text-muted-foreground">
                   {detail.examples.map((example) => (
                     <li key={example} className="text-sm">
                       {example}
