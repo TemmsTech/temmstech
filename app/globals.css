@@ -1291,8 +1291,7 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   }
 }
 
-.btn,
-.glass-close {
+.btn {
   position: relative;
 }
 .btn::after {
