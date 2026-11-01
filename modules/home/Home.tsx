@@ -24,11 +24,29 @@ export function Home() {
         nextSectionId={servicesIntro.id}
       />
       <Services intro={servicesIntro} services={services} />
-      <TabletTransition fromId={servicesIntro.id} toId={portfolioIntro.id} />
+      {/* Laptops: tablet, then phone. Tablets: phone only. Phones: none. */}
+      <TabletTransition
+        fromId={servicesIntro.id}
+        toId={portfolioIntro.id}
+        device="tablet"
+        forKinds={["laptop"]}
+      />
+      <TabletTransition
+        fromId={servicesIntro.id}
+        toId={portfolioIntro.id}
+        device="phone"
+        forKinds={["tablet"]}
+      />
       <Portfolio
         intro={portfolioIntro}
         projects={showcaseProjects}
         batchSize={4}
+      />
+      <TabletTransition
+        fromId={portfolioIntro.id}
+        toId={processIntro.id}
+        device="phone"
+        forKinds={["laptop"]}
       />
       <Process intro={processIntro} steps={processSteps} />
       <Cta

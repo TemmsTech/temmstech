@@ -223,8 +223,12 @@ export async function createDeviceScene(
     }
     const laptopGroup = normalize(laptop, 4.6);
     const phoneGroup = normalize(phone, 1.35);
-    laptopGroup.position.set(-0.6, -0.15, -0.3);
-    phoneGroup.position.set(1.65, -0.05, 1.1);
+    // Only one device is ever shown: the phone on small screens, the laptop
+    // otherwise. Each one sits centred on its own.
+    const phoneScale = phoneGroup.scale.x * 1.2;
+    laptopGroup.position.set(0, -0.15, 0);
+    phoneGroup.position.set(0, -0.05, 0);
+    phoneGroup.scale.setScalar(phoneScale);
 
     const poses = [
       { laptop: [-0.05, -0.24, 0.02], phone: [-0.04, -0.22, -0.12] },
@@ -355,8 +359,8 @@ export async function createDeviceScene(
       }
       const drift = 1 - scroll;
       const mobile = isMobile();
-      laptopGroup.visible = !mobile || scroll === 0;
-      phoneGroup.visible = mobile || scroll === 0;
+      laptopGroup.visible = !mobile;
+      phoneGroup.visible = mobile;
       const align = Math.min(1, scroll / 0.3);
       const activeGroup = mobile ? phoneGroup : laptopGroup;
       activeGroup.rotation.y += Math.sin(clock * (mobile ? 0.65 : 0.55)) * (mobile ? 0.16 : 0.12) * drift;

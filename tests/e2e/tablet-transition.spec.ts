@@ -157,3 +157,37 @@ test("late tablet loading preserves a direct work link", async ({ page }) => {
     release();
   }
 });
+
+test.describe("touch tablets", () => {
+  test.use({
+    viewport: { width: 1024, height: 768 },
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  test("get the phone transition instead of the tablet one", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await expect(page.locator(".tablet-transition")).toHaveCount(1);
+    await expect(page.locator(".tablet-transition")).toHaveAttribute(
+      "data-device",
+      "phone",
+    );
+  });
+});
+
+test.describe("phones", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  test("have no section transitions after the hero", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await expect(page.locator(".tablet-transition")).toHaveCount(0);
+  });
+});
