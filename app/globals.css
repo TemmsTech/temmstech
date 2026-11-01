@@ -506,9 +506,25 @@
   }
 }
 
+/* The next section stays hidden until the hero's zoom finishes, so the hero
+   must fill the screen (below the 5rem navbar) or tall screens show a void. */
+.hero-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 5rem);
+}
+.hero-stage > .page-container:first-child {
+  flex: 1;
+  align-content: center;
+}
 .device-stage {
   height: clamp(18rem, 27vw, 24rem);
   background: radial-gradient(ellipse at 50% 55%, #03b2fa0b, transparent 65%);
+}
+@media (min-width: 768px) and (orientation: portrait) {
+  .device-stage {
+    height: clamp(22rem, 36svh, 40rem);
+  }
 }
 @media (min-width: 1024px) {
   .device-showcase-wide {
@@ -546,14 +562,28 @@
 }
 .fallback-phone {
   position: absolute;
-  width: 24%;
+  height: 100%;
   aspect-ratio: 600 / 1295;
-  right: 1%;
+  left: 50%;
   top: 0;
   border: 6px solid var(--visual-panel);
   border-radius: 22px;
   overflow: hidden;
-  transform: rotate(7deg);
+  transform: translateX(-50%) rotate(7deg);
+}
+/* One device at a time: phone below 768px, laptop from 768px up. */
+@media (max-width: 767.98px) {
+  .fallback-laptop {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  .fallback-phone {
+    display: none;
+  }
+  .fallback-laptop {
+    left: 10%;
+  }
 }
 
 .screen-portal {
@@ -648,6 +678,7 @@
     height: 0;
   }
 }
+
 
 .section-nav {
   position: sticky;

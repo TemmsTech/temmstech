@@ -22,6 +22,42 @@ function projectiveTransform(
   return `matrix3d(${(b.x - a.x + g * b.x) / width},${(b.y - a.y + g * b.y) / width},0,${g / width},${(d.x - a.x + h * d.x) / height},${(d.y - a.y + h * d.y) / height},0,${h / height},0,0,1,0,${a.x},${a.y},0,1)`;
 }
 
+/**
+ * The section's preview, followed by the sections after it stacked beneath,
+ * exactly as the page lays them out, until `minHeight` pixels are covered. A
+ * tall screen (a phone) is then filled with real content, not empty space.
+ */
+function createPreviewStack(source: HTMLElement, minHeight: number) {
+  const first = createSectionPreview(source);
+  first.style.removeProperty("visibility");
+  if (minHeight <= 0) return first;
+  const stack = document.createElement("div");
+  stack.appendChild(first);
+  let covered = source.getBoundingClientRect().height;
+  for (
+    let next = source.nextElementSibling;
+    next && covered < minHeight;
+    next = next.nextElementSibling
+  ) {
+    // Skip spacers such as the transition runways; only real sections.
+    if (!(next instanceof HTMLElement) || next.tagName !== "SECTION") continue;
+    const copy = createSectionPreview(next);
+    copy.style.removeProperty("visibility");
+    stack.appendChild(copy);
+    covered += next.getBoundingClientRect().height;
+  }
+  // Out of sections and the screen still has room: the site footer follows
+  // <main> on every page, so finish the page with it.
+  const footer = source.closest("main")?.nextElementSibling;
+  if (
+    covered < minHeight &&
+    footer instanceof HTMLElement &&
+    footer.tagName === "FOOTER"
+  )
+    stack.appendChild(createSectionPreview(footer));
+  return stack;
+}
+
 export function createScreenPortal(
   host: HTMLElement,
   sectionId: string,
@@ -30,6 +66,14 @@ export function createScreenPortal(
     backdrop?: boolean;
     settleFrom?: number;
     refreshOnEntry?: boolean;
+    /** Fill the whole screen with the target and the sections after it. */
+    fillScreen?: boolean;
+    /**
+     * Lay the preview out at the full page width for the whole flight, so
+     * nothing is cropped on the right. Use it when the screen is much narrower
+     * than the page (a phone); the camera must then end at exactly page width.
+     */
+    keepPageWidth?: boolean;
   } = {},
 ) {
   const source = document.getElementById(sectionId);
@@ -42,7 +86,12 @@ export function createScreenPortal(
   viewport.className = "screen-portal";
   viewport.setAttribute("aria-hidden", "true");
   viewport.inert = true;
-  let copy = createSectionPreview(source);
+  // The screen is as tall as the page is wide divided by its aspect ratio.
+  const screenHeight = () =>
+    options.fillScreen && options.aspectRatio
+      ? innerWidth / options.aspectRatio
+      : 0;
+  let copy = createPreviewStack(source, screenHeight());
   let active = false;
   const style = getComputedStyle(source);
   for (const name of [
@@ -67,6 +116,8 @@ export function createScreenPortal(
   backdrop.hidden = true;
   return {
     update(corners: Quad, progress: number, mobile: boolean, occluder?: Quad) {
+      // Lay the preview out at the real page width, which excludes a scrollbar.
+      const pageWidth = host.clientWidth || innerWidth;
       backdrop.hidden =
         options.backdrop === false || progress <= 0 || progress >= 1;
       backdrop.style.opacity = String(Math.min(1, progress / 0.18));
@@ -76,8 +127,7 @@ export function createScreenPortal(
         return;
       }
       if (!active && options.refreshOnEntry) {
-        copy = createSectionPreview(source);
-        copy.style.removeProperty("visibility");
+        copy = createPreviewStack(source, screenHeight());
         viewport.replaceChildren(copy);
       }
       active = true;
@@ -91,7 +141,8 @@ export function createScreenPortal(
         Math.min(1, (progress - settleFrom) / (1 - settleFrom)),
       );
       const eased = settle * settle * (3 - 2 * settle);
-      const width = innerWidth + (projectedWidth - innerWidth) * eased;
+      const layoutEase = options.keepPageWidth ? 0 : eased;
+      const width = pageWidth + (projectedWidth - pageWidth) * layoutEase;
       const height =
         width /
         (options.aspectRatio ?? (mobile ? 6.52655 / 14.08495 : 0.294 / 0.17));
@@ -100,7 +151,7 @@ export function createScreenPortal(
       viewport.style.borderRadius = mobile
         ? `${width * 0.045 * (1 - eased)}px`
         : "0";
-      copy.style.width = `${innerWidth}px`;
+      copy.style.width = `${pageWidth}px`;
       const transform = projectiveTransform(corners, width, height);
       viewport.style.transform = transform;
       if (occluder && transform !== "none") {

@@ -3,13 +3,14 @@ import { useEffect, useState, type RefObject } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { observeSectionNavigation } from "@/lib/section-navigation";
 import { paceScroll } from "@/lib/pace-scroll";
-import type { TabletScene } from "@/lib/tablet-scene";
+import type { TabletScene, TransitionDevice } from "@/lib/tablet-scene";
 
 export function useTabletTransition(
   runway: RefObject<HTMLDivElement | null>,
   host: RefObject<HTMLDivElement | null>,
   fromId: string,
   toId: string,
+  device: TransitionDevice = "tablet",
 ) {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", true);
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
@@ -85,7 +86,7 @@ export function useTabletTransition(
     };
     import("@/lib/tablet-scene")
       .then(({ createTabletScene }) =>
-        createTabletScene(surface, toId, controller.signal, fail),
+        createTabletScene(surface, toId, controller.signal, fail, device),
       )
       .then((result) => {
         if (controller.signal.aborted) {
@@ -126,6 +127,6 @@ export function useTabletTransition(
       track.style.removeProperty("height");
       scene?.dispose();
     };
-  }, [fromId, toId, reducedMotion, runway, host]);
+  }, [fromId, toId, device, reducedMotion, runway, host]);
   return reducedMotion ? "reduced-motion" : status;
 }

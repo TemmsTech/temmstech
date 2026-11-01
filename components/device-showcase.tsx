@@ -1,7 +1,12 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { useDeviceMotion, useMediaQuery, useShowcasePlayback } from "@/hooks";
+import {
+  useDeviceKind,
+  useDeviceMotion,
+  useMediaQuery,
+  useShowcasePlayback,
+} from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
 import type { ShowcaseProject } from "@/types/showcase";
@@ -20,6 +25,7 @@ export function DeviceShowcase({
   const section = useRef<HTMLDivElement>(null);
   const scene = useRef<DeviceScene | null>(null);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", true);
+  const kind = useDeviceKind();
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
   );
@@ -35,10 +41,19 @@ export function DeviceShowcase({
     if (!element || !projects.length) return;
     const controller = new AbortController();
     let created: DeviceScene | undefined;
-    import("@/lib/device-scene")
-      .then(({ createDeviceScene }) => {
+    // Tablets get their own tablet; phones and laptops share one scene.
+    const load =
+      kind === "tablet"
+        ? import("@/lib/tablet-hero-scene").then(
+            (module) => module.createTabletHeroScene,
+          )
+        : import("@/lib/device-scene").then(
+            (module) => module.createDeviceScene,
+          );
+    load
+      .then((createScene) => {
         if (!controller.signal.aborted)
-          return createDeviceScene(
+          return createScene(
             element,
             projects,
             controller.signal,
@@ -64,7 +79,7 @@ export function DeviceShowcase({
       created?.dispose();
       scene.current = null;
     };
-  }, [projects, nextSectionId]);
+  }, [projects, nextSectionId, kind]);
   useEffect(() => {
     scene.current?.setProject(index, !reducedMotion);
   }, [index, reducedMotion, status]);
@@ -75,7 +90,7 @@ export function DeviceShowcase({
       <div
         className="device-stage relative"
         role="img"
-        aria-label={`Laptop and iPhone displaying the website: ${project.title}`}
+        aria-label={`Device preview of the website: ${project.title}`}
         data-renderer={status}
       >
         <div
