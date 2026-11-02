@@ -14,13 +14,13 @@ import {
 } from "@/data/page";
 import { services } from "@/data/services";
 import { processSteps } from "@/data/approach";
-import { showcaseProjects } from "@/data/device-showcase";
+import { heroProjects, showcaseProjects } from "@/data/device-showcase";
 export function Home() {
   return (
     <>
       <Hero
         content={heroContent}
-        projects={showcaseProjects}
+        projects={heroProjects}
         nextSectionId={servicesIntro.id}
       />
       <Services intro={servicesIntro} services={services} />

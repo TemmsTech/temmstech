@@ -67,7 +67,10 @@ export function BriefForm({
           type="button"
           onClick={onClose}
           aria-label="Close form"
-          className="glass-close"
+          className={cn(
+            buttonVariants({ variant: "destructive", size: "icon" }),
+            "glass-close",
+          )}
         >
           <svg
             viewBox="0 0 24 24"
@@ -89,7 +92,7 @@ export function BriefForm({
         What would you like to solve?
       </label>
       <p id="brief-help" className="glass-muted mt-2 text-sm leading-6">
-        A few lines about the problem and who it affects are a good start.
+        Tell us what you’d like built and roughly when. Not sure yet? A quick hello is enough.
       </p>
       <textarea
         id="project-brief"
@@ -97,8 +100,8 @@ export function BriefForm({
         value={brief}
         onChange={(event) => edit(() => setBrief(event.target.value))}
         rows={5}
-        className="glass-field mt-4 resize-y"
-        placeholder="The problem, the people, and what a better outcome could look like…"
+        className="glass-field mt-4 resize-none"
+        placeholder={"Hello TemmsTech team,\nWe’d like a website or app for our business, connected to our current tools, with some AI or automation. Could we talk?\nKind regards,\nYour name"}
       />
 
       <div className="mt-6">

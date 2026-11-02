@@ -1063,29 +1063,15 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
       0 80px 140px #07111f59;
   }
 }
-.glass-close {
+/* Close button: the red look and press-in come from the shared .btn styles.
+   This only places it in the panel's top-right corner. It is written as
+   `.glass-panel > .glass-close` so it outranks `.btn`, which is also
+   `position: relative` (for its hover pulse) and would otherwise win. */
+.glass-panel > .glass-close {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  cursor: pointer;
-  place-items: center;
-  border: 1px solid rgb(248 113 113 / 0.4);
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.06);
-  color: #f87171;
-  transition:
-    background-color 150ms,
-    border-color 150ms,
-    color 150ms;
-}
-.glass-close:hover,
-.glass-close:active {
-  border-color: #dc2626;
-  background: #dc2626;
-  color: #fff;
+  border-radius: 9999px;
 }
 
 /* Contact reveal: the form slides in from the right when the section opens. */
