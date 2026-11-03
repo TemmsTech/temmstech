@@ -518,18 +518,46 @@
   align-content: center;
 }
 .device-stage {
-  height: clamp(18rem, 27vw, 24rem);
+  /* Extra room added below the original frame; the camera is untouched. */
+  --stage-extra: 0rem;
+  /* Room added above and below the frame without moving the page layout
+     (negative margins cancel it out) or the model (the camera view shifts). */
+  --stage-top: 0rem;
+  --stage-bottom: 0rem;
+  --stage-grow: calc(var(--stage-extra) + var(--stage-top) + var(--stage-bottom));
+  box-sizing: border-box;
+  padding-top: var(--stage-top);
+  padding-bottom: calc(var(--stage-extra) + var(--stage-bottom));
+  margin-top: calc(var(--stage-top) * -1);
+  margin-bottom: calc(var(--stage-bottom) * -1);
+  height: calc(clamp(18rem, 27vw, 24rem) + var(--stage-grow));
   background: radial-gradient(ellipse at 50% 55%, #03b2fa0b, transparent 65%);
 }
 @media (min-width: 768px) and (orientation: portrait) {
   .device-stage {
-    height: clamp(22rem, 36svh, 40rem);
+    height: calc(clamp(22rem, 36svh, 40rem) + var(--stage-grow));
+  }
+}
+@media (min-width: 768px) {
+  .device-stage {
+    --stage-extra: 6rem;
+    --stage-top: 3.5rem;
+    --stage-bottom: 3rem;
   }
 }
 @media (min-width: 1024px) {
   .device-showcase-wide {
     width: calc(100% + max(3rem, (100vw - 80rem) / 2));
   }
+}
+.device-stage [data-dragging] {
+  cursor: grabbing;
+}
+.device-stage canvas {
+  cursor: grab;
+}
+.device-stage [data-dragging] canvas {
+  cursor: grabbing;
 }
 .device-stage canvas {
   display: block;
@@ -846,6 +874,79 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   }
 }
 
+/* Contact hero wall of work: every tile starts as a small dot, then the dots open
+   into the full grid one after another. Plain CSS, so it plays on first paint. */
+@keyframes wall-tile-open {
+  from {
+    clip-path: inset(calc(50% - 5px) round 999px);
+    scale: 0.5;
+  }
+  to {
+    clip-path: inset(0 round 0);
+    scale: 1;
+  }
+}
+@keyframes wall-tile-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-wall-tile {
+    animation: wall-tile-open 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation-delay: calc(350ms + var(--i) * 45ms);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-wall-tile {
+    animation: wall-tile-fade 300ms ease backwards;
+  }
+}
+
+/* Loading state for a live site frame: a soft sheen sweeps across while the
+   site opens, then the placeholder fades away as the site fades in. */
+@keyframes live-frame-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.live-frame-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity 400ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 400ms;
+}
+.live-frame-loading[data-loaded] {
+  opacity: 0;
+  visibility: hidden;
+}
+.live-frame-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.1) 50%,
+    transparent 70%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-frame-sheen {
+    animation: live-frame-sheen 1400ms linear infinite;
+  }
+}
+
 /* Contact hero: the three tiles drift up and down out of step, with a slow push-in on each photo. */
 @keyframes contact-float {
   from {
@@ -1063,29 +1164,15 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
       0 80px 140px #07111f59;
   }
 }
-.glass-close {
+/* Close button: the red look and press-in come from the shared .btn styles.
+   This only places it in the panel's top-right corner. It is written as
+   `.glass-panel > .glass-close` so it outranks `.btn`, which is also
+   `position: relative` (for its hover pulse) and would otherwise win. */
+.glass-panel > .glass-close {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  cursor: pointer;
-  place-items: center;
-  border: 1px solid rgb(248 113 113 / 0.4);
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.06);
-  color: #f87171;
-  transition:
-    background-color 150ms,
-    border-color 150ms,
-    color 150ms;
-}
-.glass-close:hover,
-.glass-close:active {
-  border-color: #dc2626;
-  background: #dc2626;
-  color: #fff;
+  border-radius: 9999px;
 }
 
 /* Contact reveal: the form slides in from the right when the section opens. */
@@ -1392,4 +1479,261 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
       box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
       filter 160ms ease-out;
   }
+}
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Browser window pinned to the hero laptop's screen (lib/screen-browser.ts).
+   Laid out at 1280x740 and mapped onto the model display with matrix3d. */
+.screen-browser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+  color: var(--foreground);
+  background: var(--ink);
+  will-change: transform;
+}
+.screen-browser[hidden] {
+  display: none;
+}
+.screen-browser[data-instant] * {
+  transition: none !important;
+}
+.screen-browser-tabs {
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 56px;
+  padding: 10px 14px 0;
+  background: var(--ink);
+}
+.screen-browser-pill {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 14px;
+  border-radius: 12px 12px 0 0;
+  background: var(--card);
+  transition: transform 300ms var(--ease-out);
+}
+.screen-browser-tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  transition: color 200ms var(--ease-out);
+}
+.screen-browser-tab[data-active="true"] {
+  color: var(--foreground);
+}
+.screen-browser-tab-icon {
+  display: grid;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--brand);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.screen-browser-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-browser-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 60px;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  background: var(--card);
+}
+.screen-browser-nav {
+  flex: none;
+  font-size: 26px;
+  white-space: pre;
+  color: var(--muted-foreground);
+}
+.screen-browser-address {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 19px;
+  background: var(--ink);
+  font-size: 20px;
+  white-space: nowrap;
+}
+.screen-browser-scheme {
+  color: var(--muted-foreground);
+}
+.screen-browser-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-browser-load {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-browser-load[data-run] {
+  animation: screen-browser-load 900ms var(--ease-out) both;
+}
+@keyframes screen-browser-load {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  75% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+.screen-browser-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ink);
+}
+.screen-browser-page {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateX(40px);
+  transition:
+    opacity 300ms var(--ease-out),
+    transform 300ms var(--ease-out);
+}
+.screen-browser-page[data-state="active"] {
+  z-index: 2;
+  opacity: 1;
+  transform: none;
+}
+.screen-browser-page[data-state="leaving"] {
+  z-index: 1;
+  opacity: 0;
+  transform: translateX(-40px);
+}
+.screen-browser-page iframe,
+.screen-browser-page video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.screen-browser-page video {
+  object-fit: cover;
+  background: #000;
+}
+.screen-browser-page iframe[data-loaded],
+.screen-browser-page video[data-loaded] {
+  opacity: 1;
+}
+.screen-browser-sound {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+.screen-browser-sound[hidden] {
+  display: none;
+}
+.screen-browser-sound-button {
+  width: 150px;
+  height: 150px;
+  padding: 40px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.55);
+  border: 3px solid rgb(255 255 255 / 0.35);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.screen-browser-sound:hover .screen-browser-sound-button,
+.screen-browser-sound-button:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: none) {
+  .screen-browser-sound-button {
+    opacity: 0.85;
+    transform: none;
+  }
+}
+.screen-browser-sound-button[data-muted="true"] .icon-on,
+.screen-browser-sound-button[data-muted="false"] .icon-off {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-browser * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.screen-browser-loading-title {
+  position: relative;
+  font-size: 28px;
+  color: var(--muted-foreground);
+}
+.screen-browser[data-kind="phone"] {
+  border-radius: 18px;
+}
+.screen-browser-status {
+  flex: none;
+  height: 54px;
+  background: var(--card);
+}
+.screen-browser[data-kind="phone"] .screen-browser-bar {
+  height: 56px;
+  padding: 0 16px;
+}
+.screen-browser[data-kind="phone"] .screen-browser-address {
+  justify-content: center;
+  font-size: 19px;
 }

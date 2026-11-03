@@ -16,20 +16,12 @@ import {
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { disposeObject } from "@/lib/dispose-object";
 import { createScreenPortal } from "@/lib/screen-portal";
+import { createScreenBrowser, type ScreenBrowser } from "@/lib/screen-browser";
 import type { DeviceScene } from "@/lib/device-scene";
 import type { ShowcaseProject } from "@/types/showcase";
 
 type Point = { x: number; y: number };
 type Quad = [Point, Point, Point, Point];
-
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Unable to load showcase image."));
-    image.src = src;
-  });
-}
 
 /**
  * Hero scene for tablets: a single tablet that drifts, cycles through the
@@ -64,6 +56,8 @@ export async function createTabletHeroScene(
   let observer: ResizeObserver | undefined;
   let portal: ReturnType<typeof createScreenPortal> = null;
   let finish: (() => void) | undefined;
+  let browser: ScreenBrowser | undefined;
+  let visibility: IntersectionObserver | undefined;
 
   const onLoss = (event: Event) => {
     event.preventDefault();
@@ -77,6 +71,8 @@ export async function createTabletHeroScene(
     cancelAnimationFrame(frame);
     observer?.disconnect();
     portal?.dispose();
+    visibility?.disconnect();
+    browser?.dispose();
     renderer.domElement.removeEventListener("webglcontextlost", onLoss);
     disposeObject(stage);
     renderer.dispose();
@@ -85,10 +81,9 @@ export async function createTabletHeroScene(
   }
 
   try {
-    const [gltf, screens] = await Promise.all([
-      new GLTFLoader().loadAsync("/models/microsoft-tablet.glb"),
-      Promise.all(projects.map((project) => loadImage(project.desktopImage))),
-    ]);
+    const gltf = await new GLTFLoader().loadAsync(
+      "/models/microsoft-tablet.glb",
+    );
     if (signal.aborted) throw new Error("Tablet loading cancelled");
     const model = gltf.scene;
     const body = new Group();
@@ -127,7 +122,8 @@ export async function createTabletHeroScene(
     ];
     const aspect = (right - left) / (top - bottom);
 
-    // A plane just in front of the glass carries the project screenshots.
+    // A plane just in front of the glass is the blank screen under the live browser window
+    // and the one the section portal opens from.
     const canvas = document.createElement("canvas");
     canvas.width = 1280;
     canvas.height = Math.round(1280 / aspect);
@@ -151,28 +147,13 @@ export async function createTabletHeroScene(
       getComputedStyle(document.documentElement)
         .getPropertyValue("--background")
         .trim();
+    const ink = () =>
+      getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
     let screenIsPortal = false;
-    function applyScreen(index: number) {
-      const image = screens[index];
-      if (!image || !context) return;
-      if (screenIsPortal) {
-        context.fillStyle = background();
-        context.fillRect(0, 0, canvas.width, canvas.height);
-      } else {
-        const scale = Math.max(
-          canvas.width / image.width,
-          canvas.height / image.height,
-        );
-        const w = image.width * scale,
-          h = image.height * scale;
-        context.drawImage(
-          image,
-          (canvas.width - w) / 2,
-          (canvas.height - h) / 2,
-          w,
-          h,
-        );
-      }
+    function applyScreen() {
+      if (!context) return;
+      context.fillStyle = screenIsPortal ? background() : ink();
+      context.fillRect(0, 0, canvas.width, canvas.height);
       texture.needsUpdate = true;
     }
 
@@ -180,6 +161,19 @@ export async function createTabletHeroScene(
       aspectRatio: aspect,
       refreshOnEntry: true,
     });
+    const tabletBrowser = createScreenBrowser(host, projects, {
+      kind: "tablet",
+      aspect,
+    });
+    browser = tabletBrowser;
+    let inView = false;
+    const syncLive = () =>
+      tabletBrowser.setLive(inView && scroll <= 0 && !document.hidden);
+    visibility = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncLive();
+    });
+    visibility.observe(host);
     const worldCorners = () => {
       body.updateWorldMatrix(true, false);
       return corners.map((point) => body.localToWorld(point.clone()));
@@ -256,7 +250,7 @@ export async function createTabletHeroScene(
           transition.from[2] + (next[2] - transition.from[2]) * eased,
         );
         if (t >= 0.45 && !transition.swapped) {
-          applyScreen(transition.index);
+          applyScreen();
           transition.swapped = true;
         }
         if (t === 1) {
@@ -284,6 +278,17 @@ export async function createTabletHeroScene(
         }) as Quad;
         portal.update(projected, scroll, false);
       }
+      {
+        const projected = worldCorners().map((world) => {
+          const point = world.project(camera);
+          return {
+            x: ((point.x + 1) * host.clientWidth) / 2,
+            y: ((1 - point.y) * host.clientHeight) / 2,
+          };
+        }) as Quad;
+        tabletBrowser.update(projected, scroll <= 0);
+        syncLive();
+      }
       if (moving || transition) frame = requestAnimationFrame(draw);
     }
     function schedule() {
@@ -298,7 +303,7 @@ export async function createTabletHeroScene(
       renderer.setSize(w, h);
       schedule();
     }
-    applyScreen(0);
+    applyScreen();
     host.appendChild(renderer.domElement);
     observer = new ResizeObserver(resize);
     observer.observe(host);
@@ -306,7 +311,7 @@ export async function createTabletHeroScene(
     finish = () => {
       if (transition) {
         current = transition.index;
-        applyScreen(current);
+        applyScreen();
         transition = undefined;
       }
       schedule();
@@ -314,10 +319,11 @@ export async function createTabletHeroScene(
     return {
       setProject(index, animate) {
         if (disposed) return;
+        tabletBrowser.setActive(index, animate && index !== current);
         if (!animate || index === current) {
           current = index;
           transition = undefined;
-          applyScreen(index);
+          applyScreen();
         } else
           transition = {
             index,
@@ -337,7 +343,7 @@ export async function createTabletHeroScene(
         const entering = progress > 0 && progress < 1;
         if (entering !== screenIsPortal) {
           screenIsPortal = entering;
-          applyScreen(current);
+          applyScreen();
         }
         scroll = progress;
         schedule();

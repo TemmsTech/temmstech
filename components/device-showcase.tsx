@@ -1,6 +1,6 @@
 "use client";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { LiveFrame } from "@/components/live-frame";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useDeviceKind,
   useDeviceMotion,
@@ -9,6 +9,7 @@ import {
 } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
+import { loadVideoDurations, showcaseDelay } from "@/lib/showcase-timing";
 import type { ShowcaseProject } from "@/types/showcase";
 
 type DeviceShowcaseProps = {
@@ -29,11 +30,48 @@ export function DeviceShowcase({
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
   );
+  // A tab with a video stays open until the video ends.
+  const [durationsLoaded, setDurationsLoaded] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    loadVideoDurations(projects).then(() => {
+      if (!cancelled) setDurationsLoaded((count) => count + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projects]);
+  const delayFor = useCallback(
+    (at: number) => showcaseDelay(projects[at]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projects, durationsLoaded],
+  );
+  // The tab timer waits while the device is being turned by hand.
+  const [holding, setHolding] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const release = () => {
+      setHolding(false);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+    const press = () => {
+      setHolding(true);
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
+    };
+    element.addEventListener("pointerdown", press);
+    return () => {
+      element.removeEventListener("pointerdown", press);
+      release();
+    };
+  }, []);
   const [index] = useShowcasePlayback(
     section,
-    !reducedMotion && status === "ready",
+    !reducedMotion && status !== "loading" && !holding,
     projects.length,
-    7000,
+    delayFor,
   );
   const project = projects[index] ?? projects[0];
   useEffect(() => {
@@ -97,29 +135,26 @@ export function DeviceShowcase({
           ref={host}
           className={cn("absolute inset-0", status !== "ready" && "invisible")}
         />
-        {status !== "ready" && (
+        {status === "fallback" && (
           <div className="device-fallback" aria-hidden="true">
-            {(["desktop", "mobile"] as const).map((size) => (
-              <div
-                key={size}
-                className={
-                  size === "desktop" ? "fallback-laptop" : "fallback-phone"
-                }
-              >
-                <Image
-                  src={
-                    size === "desktop"
-                      ? project.desktopImage
-                      : project.mobileImage
-                  }
-                  alt=""
-                  fill
-                  sizes={size === "desktop" ? "600px" : "180px"}
-                  unoptimized
-                  loading="eager"
-                />
-              </div>
-            ))}
+            <div className="fallback-laptop">
+              <LiveFrame
+                key={`${project.id}-desktop`}
+                url={project.url}
+                title={project.title}
+                controls={false}
+              />
+            </div>
+            <div className="fallback-phone">
+              <LiveFrame
+                key={`${project.id}-mobile`}
+                url={project.url}
+                title={project.title}
+                controls={false}
+                siteWidth={390}
+                aspect={600 / 1295}
+              />
+            </div>
           </div>
         )}
       </div>

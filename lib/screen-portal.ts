@@ -1,10 +1,10 @@
 import { createSectionPreview } from "@/lib/section-preview";
 
 type Point = { x: number; y: number };
-type Quad = [Point, Point, Point, Point];
+export type Quad = [Point, Point, Point, Point];
 
 // Project a flat DOM viewport onto the four corners of the model display.
-function projectiveTransform(
+export function projectiveTransform(
   [a, b, c, d]: Quad,
   width: number,
   height: number,
