@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// The size the site is laid out at inside the frame (a normal laptop window).
-// The frame is then shrunk to fit the card, so visitors see the real desktop
-// layout, not a squeezed-down mobile one.
-const SITE_WIDTH = 1280;
-const SITE_HEIGHT = 747; // keeps the card's 12:7 shape
+// By default the site is laid out at the size of a normal laptop window and the
+// frame is shrunk to fit the card, so visitors see the real desktop layout, not
+// a squeezed-down mobile one. Pass a narrower siteWidth for a phone-shaped frame.
+const DEFAULT_SITE_WIDTH = 1280;
+const DEFAULT_ASPECT = 12 / 7;
 
 type LiveFrameProps = {
   url: string;
@@ -14,6 +14,10 @@ type LiveFrameProps = {
   /** Show the Replay / Try it bar under the frame. Off for small decorative frames. */
   controls?: boolean;
   className?: string;
+  /** Width the site is laid out at, in CSS pixels. */
+  siteWidth?: number;
+  /** Width / height of the frame. */
+  aspect?: number;
 };
 
 export function LiveFrame({
@@ -21,7 +25,10 @@ export function LiveFrame({
   title,
   controls = true,
   className,
+  siteWidth = DEFAULT_SITE_WIDTH,
+  aspect = DEFAULT_ASPECT,
 }: LiveFrameProps) {
+  const siteHeight = Math.round(siteWidth / aspect);
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.3);
   const [active, setActive] = useState(false);
@@ -34,11 +41,11 @@ export function LiveFrame({
     const element = box.current;
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => {
-      setScale(entry.contentRect.width / SITE_WIDTH);
+      setScale(entry.contentRect.width / siteWidth);
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [siteWidth]);
 
   // Start the site once, the first time most of the card is on screen, so its
   // intro plays while the visitor can see it. After that it stays loaded for the
@@ -61,7 +68,11 @@ export function LiveFrame({
 
   return (
     <div className={className}>
-      <div ref={box} className="relative aspect-[12/7] overflow-hidden bg-ink">
+      <div
+        ref={box}
+        className="relative overflow-hidden bg-ink"
+        style={{ aspectRatio: aspect }}
+      >
         <div
           className="live-frame-loading"
           data-loaded={loaded ? "" : undefined}
@@ -85,8 +96,8 @@ export function LiveFrame({
             onLoad={() => setLoaded(true)}
             className="absolute top-0 left-0 origin-top-left border-0 bg-white"
             style={{
-              width: SITE_WIDTH,
-              height: SITE_HEIGHT,
+              width: siteWidth,
+              height: siteHeight,
               transform: `scale(${scale})`,
               // Off by default so scrolling over a card scrolls the page
               // instead of getting caught inside the site.

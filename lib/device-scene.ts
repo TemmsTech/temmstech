@@ -22,7 +22,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { drawSectionScreen } from "@/lib/section-screen";
 import { createScreenPortal } from "@/lib/screen-portal";
-import type { CapturedProject } from "@/types/showcase";
+import { createScreenBrowser, type ScreenBrowser } from "@/lib/screen-browser";
+import { showcaseDelay } from "@/lib/showcase-timing";
+import type { ShowcaseProject } from "@/types/showcase";
 
 export type DeviceScene = {
   setProject: (index: number, animate: boolean) => void;
@@ -32,16 +34,25 @@ export type DeviceScene = {
   dispose: () => void;
 };
 
-type ScreenPair = { desktop: HTMLImageElement; mobile: HTMLImageElement };
+// The laptop turns about its vertical axis: front-on, then to one side and back,
+// alternating sides as each website opens. About 35 degrees reads clearly while
+// keeping the live site legible; raise it for a more dramatic side-on view.
+const LAPTOP_SWAY_YAW = 0.62;
+const LAPTOP_TILT = -0.03;
+// Resting camera distance from the scene (was 6.8). Lower is closer.
+const CAMERA_DISTANCE = 6.2;
+// Dragging turns the device by hand; it eases back to its sway on release.
+const DRAG_YAW_LIMIT = 1.0; // about 57 degrees each way
+const DRAG_PITCH_LIMIT = 0.4; // about 23 degrees up or down
+const DRAG_RETURN_DELAY_MS = 900;
 
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Unable to load showcase image."));
-    image.src = src;
-  });
-}
+const smoothstep = (from: number, to: number, value: number) => {
+  const t = Math.min(1, Math.max(0, (value - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+};
+/** 0 → 1 → 0 across one website's turn: rests front-on while its tab opens, turns away, returns. */
+const swing = (phase: number) =>
+  smoothstep(0.18, 0.48, phase) - smoothstep(0.58, 0.9, phase);
 
 function createCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
@@ -56,7 +67,7 @@ function createCanvas(width: number, height: number) {
 
 export async function createDeviceScene(
   host: HTMLElement,
-  projects: readonly CapturedProject[],
+  projects: readonly ShowcaseProject[],
   signal: AbortSignal,
   onContextLost: () => void,
   nextSectionId: string,
@@ -93,7 +104,11 @@ export async function createDeviceScene(
   let disposed = false;
   let observer: ResizeObserver | undefined;
   let finish: (() => void) | undefined;
+  let teardownDrag: (() => void) | undefined;
   let portal: ReturnType<typeof createScreenPortal>;
+  const browserViews: ScreenBrowser[] = [];
+  let inView = false;
+  let visibility: IntersectionObserver | undefined;
 
   const onLoss = (event: Event) => {
     event.preventDefault();
@@ -106,7 +121,10 @@ export async function createDeviceScene(
     disposed = true;
     cancelAnimationFrame(frame);
     observer?.disconnect();
+    teardownDrag?.();
     portal?.dispose();
+    visibility?.disconnect();
+    browserViews.forEach((view) => view.dispose());
     renderer.domElement.removeEventListener("webglcontextlost", onLoss);
     disposeObject(stage);
     environment.dispose();
@@ -117,31 +135,21 @@ export async function createDeviceScene(
 
   try {
     const loader = new GLTFLoader();
-    const [laptopResult, phoneResult, screensResult] = await Promise.allSettled(
-      [
-        loader.loadAsync("/models/laptop.glb"),
-        loader.loadAsync("/models/iphone-16.glb"),
-        Promise.all(
-          projects.map(async (project): Promise<ScreenPair> => ({
-            desktop: await loadImage(project.desktopImage),
-            mobile: await loadImage(project.mobileImage),
-          })),
-        ),
-      ],
-    );
+    const [laptopResult, phoneResult] = await Promise.allSettled([
+      loader.loadAsync("/models/laptop.glb"),
+      loader.loadAsync("/models/iphone-16.glb"),
+    ]);
     if (laptopResult.status === "fulfilled")
       stage.add(laptopResult.value.scene);
     if (phoneResult.status === "fulfilled") stage.add(phoneResult.value.scene);
     if (
       laptopResult.status !== "fulfilled" ||
       phoneResult.status !== "fulfilled" ||
-      screensResult.status !== "fulfilled" ||
       signal.aborted
     )
       throw new Error("Device assets unavailable.");
     const laptop = laptopResult.value.scene;
     const phone = phoneResult.value.scene;
-    const screens = screensResult.value;
     const phoneDisplay = phone.getObjectByName("Object_18");
     const laptopDisplay = laptop.getObjectByName("Screen_ComputerScreen_0");
     if (
@@ -187,25 +195,26 @@ export async function createDeviceScene(
     }
     oldLaptopMaterial.dispose();
 
-    function applyScreen(index: number) {
-      const pair = screens[index];
-      if (!pair) return;
+    function applyScreen() {
+      // The live browser windows cover both displays; the glass underneath is
+      // plain, and the section portal opens from the same blank screen.
       if (screenIsPortal) drawSectionScreen(phoneCanvas.canvas, nextSectionId);
-      else phoneCanvas.context.drawImage(pair.mobile, 0, 0, 600, 1295);
+      else {
+        phoneCanvas.context.fillStyle = getComputedStyle(document.documentElement)
+          .getPropertyValue("--ink")
+          .trim();
+        phoneCanvas.context.fillRect(0, 0, 600, 1295);
+      }
       phoneCanvas.texture.needsUpdate = true;
       laptopCanvas.context.drawImage(atlasImage, 0, 0, 1024, 1024);
       // The supplied laptop's display occupies this region of its embedded UV atlas.
       laptopCanvas.context.save();
       laptopCanvas.context.translate(481, 1011);
       laptopCanvas.context.scale(1, -1);
-      if (typeof screenIsPortal !== "undefined" && screenIsPortal) {
-        laptopCanvas.context.fillStyle = getComputedStyle(
-          document.documentElement,
-        )
-          .getPropertyValue("--background")
-          .trim();
-        laptopCanvas.context.fillRect(0, 0, 534, 312);
-      } else laptopCanvas.context.drawImage(pair.desktop, 0, 0, 534, 312);
+      laptopCanvas.context.fillStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue(screenIsPortal ? "--background" : "--ink")
+        .trim();
+      laptopCanvas.context.fillRect(0, 0, 534, 312);
       laptopCanvas.context.restore();
       laptopCanvas.texture.needsUpdate = true;
     }
@@ -267,11 +276,34 @@ export async function createDeviceScene(
       );
     };
     portal = createScreenPortal(host, nextSectionId, { refreshOnEntry: true });
+    const laptopBrowser = createScreenBrowser(host, projects, {
+      kind: "laptop",
+      aspect: 0.294 / 0.17,
+    });
+    const phoneBrowser = createScreenBrowser(host, projects, {
+      kind: "phone",
+      aspect: 6.52655 / 14.08495,
+    });
+    browserViews.push(laptopBrowser, phoneBrowser);
+    visibility = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncLive();
+    });
+    visibility.observe(host);
     let current = 0;
     let moving = false;
     let scroll = 0;
     let screenIsPortal = false;
     let clock = 0;
+    let projectStart = 0;
+    // Sites load only while the hero is on screen, never during the scroll takeover.
+    const syncLive = () => {
+      const open = inView && scroll <= 0 && !document.hidden;
+      const mobile = isMobile();
+      laptopBrowser.setLive(open && !mobile);
+      phoneBrowser.setLive(open && mobile);
+    };
+    let projectIndex = 0;
     let previousTime = 0;
     let transition:
       | {
@@ -288,6 +320,11 @@ export async function createDeviceScene(
     const render = () => {
       if (!disposed) renderer.render(scene, camera);
     };
+    let stageExtra = 0;
+    let stageTop = 0;
+    let stageBase = 0;
+    // Fraction of the original stage height the view is shifted down by.
+    const STAGE_LIFT = 0.04;
     function positionCamera() {
       const corners = worldCorners();
       screenTarget.copy(corners[0]).add(corners[2]).multiplyScalar(0.5);
@@ -302,7 +339,7 @@ export async function createDeviceScene(
         ) * 0.97;
       const zoomProgress = scroll;
       const zoom = zoomProgress * zoomProgress * (3 - 2 * zoomProgress);
-      origin.set(0, 1.15, 6.8 * Math.max(1, 1.3 / camera.aspect));
+      origin.set(0, 1.15, CAMERA_DISTANCE * Math.max(1, 1.3 / camera.aspect));
       const offset = origin.clone().sub(screenTarget);
       const zoomDistance = Math.exp(
         Math.log(offset.length()) * (1 - zoom) + Math.log(distance) * zoom,
@@ -323,11 +360,55 @@ export async function createDeviceScene(
       gaze.set(0, 0.05, 0).lerp(screenTarget, zoom).add(framing);
       camera.up.set(0, 1, 0).lerp(up.normalize(), zoom).normalize();
       camera.lookAt(gaze);
+      // Slide the view window down so the laptop sits higher in the stage,
+      // using the empty band at the top. Fades out during the scroll zoom.
+      if (camera.view?.enabled) {
+        const lift =
+          (stageExtra > 0 ? (1 - zoom) * STAGE_LIFT * stageBase : 0) -
+          stageTop;
+        if (camera.view.offsetY !== lift) {
+          camera.view.offsetY = lift;
+          camera.updateProjectionMatrix();
+        }
+      }
     }
+
+    // Hand-turning state: targets follow the pointer, current values chase them.
+    let dragging = false;
+    let dragYaw = 0;
+    let dragPitch = 0;
+    let targetYaw = 0;
+    let targetPitch = 0;
+    let hold = 0; // 0 → 1 while dragging: fades the automatic sway out
+    let releasedAt = 0;
+    let dragTime = 0;
+    const dragActive = () =>
+      dragging ||
+      hold > 0.001 ||
+      Math.abs(dragYaw) > 0.001 ||
+      Math.abs(dragPitch) > 0.001 ||
+      Math.abs(targetYaw) > 0.001 ||
+      Math.abs(targetPitch) > 0.001;
 
     function draw(now: number) {
       frame = 0;
       if (disposed) return;
+      {
+        const dt = dragTime ? Math.min((now - dragTime) / 1000, 0.05) : 0;
+        dragTime = now;
+        if (!dragging && now - releasedAt > DRAG_RETURN_DELAY_MS) {
+          const back = Math.exp(-dt * 1.8);
+          targetYaw *= back;
+          targetPitch *= back;
+        }
+        const follow = 1 - Math.exp(-dt * 14);
+        dragYaw += (targetYaw - dragYaw) * follow;
+        dragPitch += (targetPitch - dragPitch) * follow;
+        hold += ((dragging ? 1 : 0) - hold) * (1 - Math.exp(-dt * 6));
+        if (!dragActive()) {
+          dragYaw = dragPitch = targetYaw = targetPitch = hold = 0;
+        }
+      }
       if (moving)
         clock += previousTime ? Math.min(now - previousTime, 50) / 1000 : 0;
       previousTime = now;
@@ -349,7 +430,7 @@ export async function createDeviceScene(
           ) as [number, number, number]),
         );
         if (t >= 0.45 && !transition.swapped) {
-          applyScreen(transition.index);
+          applyScreen();
           transition.swapped = true;
         }
         if (t === 1) {
@@ -363,15 +444,30 @@ export async function createDeviceScene(
       phoneGroup.visible = mobile;
       const align = Math.min(1, scroll / 0.3);
       const activeGroup = mobile ? phoneGroup : laptopGroup;
-      activeGroup.rotation.y += Math.sin(clock * (mobile ? 0.65 : 0.55)) * (mobile ? 0.16 : 0.12) * drift;
-      activeGroup.position.y += Math.sin(clock * (mobile ? 0.8 : 0.7) + (mobile ? 1 : 0)) * (mobile ? 0.14 : 0.09) * drift;
-      if (!mobile) activeGroup.rotation.z += Math.sin(clock * 0.4) * 0.025 * drift;
+      if (mobile) {
+        activeGroup.rotation.y +=
+          Math.sin(clock * 0.65) * 0.16 * drift * (1 - hold) + dragYaw;
+        activeGroup.position.y += Math.sin(clock * 0.8 + 1) * 0.14 * drift;
+      } else {
+        // Laptop: one deliberate turn per website, in step with the tab changes.
+        // Wall-clock phase, like the tab timer, so a slow frame rate never
+        // lets the turn drift out of step with the tab changes.
+        const phase = Math.min(1, (performance.now() - projectStart) / showcaseDelay(projects[projectIndex]));
+        const side = projectIndex % 2 === 0 ? 1 : -1;
+        laptopGroup.rotation.set(
+          LAPTOP_TILT + dragPitch,
+          side * LAPTOP_SWAY_YAW * (moving ? swing(phase) : 0) * drift * (1 - hold) +
+            dragYaw,
+          0,
+        );
+        laptopGroup.position.y = -0.15;
+      }
       activeGroup.rotation.x *= 1 - align;
       activeGroup.rotation.y *= 1 - align;
       activeGroup.rotation.z *= 1 - align;
       positionCamera();
       render();
-      if (portal) {
+      {
         const corners = worldCorners().map((world) => {
           const point = world.project(camera);
           return {
@@ -384,9 +480,13 @@ export async function createDeviceScene(
           { x: number; y: number },
           { x: number; y: number },
         ];
-        portal.update(corners, scroll, mobile);
+        portal?.update(corners, scroll, mobile);
+        const open = scroll <= 0;
+        laptopBrowser.update(corners, !mobile && open);
+        phoneBrowser.update(corners, mobile && open);
+        syncLive();
       }
-      if (moving || transition) frame = requestAnimationFrame(draw);
+      if (moving || transition || dragActive()) frame = requestAnimationFrame(draw);
     }
     function schedule() {
       if (!frame && !disposed) frame = requestAnimationFrame(draw);
@@ -395,12 +495,24 @@ export async function createDeviceScene(
       const width = host.clientWidth;
       const height = host.clientHeight;
       if (!width || !height || disposed) return;
-      camera.aspect = width / height;
+      // The stage has extra room below its original frame (CSS padding-bottom).
+      // Frame the camera on the original area and render the extra strip below.
+      const parent = host.parentElement;
+      const style = parent ? getComputedStyle(parent) : undefined;
+      const top = style ? parseFloat(style.paddingTop) || 0 : 0;
+      const bottom = style ? parseFloat(style.paddingBottom) || 0 : 0;
+      const extra = Math.max(0, Math.min(height / 2, bottom));
+      const base = Math.max(1, height - top - bottom);
+      stageExtra = extra;
+      stageTop = top;
+      stageBase = base;
+      camera.aspect = width / base;
+      camera.setViewOffset(width, base, 0, 0, width, height);
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
       schedule();
     }
-    applyScreen(0);
+    applyScreen();
     setPose(0);
     host.appendChild(renderer.domElement);
     observer = new ResizeObserver(resize);
@@ -409,18 +521,86 @@ export async function createDeviceScene(
     finish = () => {
       if (transition) {
         current = transition.index;
-        applyScreen(current);
+        applyScreen();
         transition = undefined;
       }
       schedule();
     };
+    // Drag to turn the device. Mouse and pen turn both ways; touch turns
+    // sideways only, so vertical swipes still scroll the page.
+    {
+      let lastX = 0;
+      let lastY = 0;
+      let travelled = 0;
+      let touch = false;
+      const clamp = (value: number, limit: number) =>
+        Math.max(-limit, Math.min(limit, value));
+      const swallowClick = (event: MouseEvent) => event.stopPropagation();
+      const onMove = (event: PointerEvent) => {
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        travelled += Math.abs(dx) + Math.abs(dy);
+        targetYaw = clamp(targetYaw + dx * 0.008, DRAG_YAW_LIMIT);
+        if (!touch)
+          targetPitch = clamp(targetPitch + dy * 0.006, DRAG_PITCH_LIMIT);
+        schedule();
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        if (!dragging) return;
+        dragging = false;
+        releasedAt = performance.now();
+        // Restart the automatic turn from rest, in step with the tab timer.
+        projectStart = releasedAt;
+        delete host.dataset.dragging;
+        if (travelled > 4) {
+          // The pointer-up after a drag must not count as a click on the screen.
+          host.addEventListener("click", swallowClick, {
+            capture: true,
+            once: true,
+          });
+          setTimeout(
+            () => host.removeEventListener("click", swallowClick, true),
+            0,
+          );
+        }
+        schedule();
+      };
+      const onDown = (event: PointerEvent) => {
+        if (event.button !== 0 || scroll > 0 || disposed) return;
+        dragging = true;
+        touch = event.pointerType === "touch";
+        lastX = event.clientX;
+        lastY = event.clientY;
+        travelled = 0;
+        host.dataset.dragging = "";
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+        schedule();
+      };
+      host.style.touchAction = "pan-y";
+      host.addEventListener("pointerdown", onDown);
+      teardownDrag = () => {
+        host.removeEventListener("pointerdown", onDown);
+        onUp();
+      };
+    }
     return {
       setProject(index, animate) {
         if (disposed) return;
+        laptopBrowser.setActive(index, animate && index !== current);
+        phoneBrowser.setActive(index, animate && index !== current);
+        projectStart = performance.now();
+        projectIndex = index;
         if (!animate || index === current) {
           current = index;
           transition = undefined;
-          applyScreen(index);
+          applyScreen();
         } else
           transition = {
             index,
@@ -442,6 +622,7 @@ export async function createDeviceScene(
       setMotion(enabled) {
         moving = enabled;
         previousTime = 0;
+        if (enabled) projectStart = performance.now();
         if (!enabled) finish?.();
         schedule();
       },
@@ -462,9 +643,10 @@ export async function createDeviceScene(
               laptopCanvas.context.fillRect(481, 699, 534, 312);
               laptopCanvas.texture.needsUpdate = true;
             }
-          } else applyScreen(current);
+          } else applyScreen();
         }
         scroll = progress;
+        syncLive();
         schedule();
       },
       finishTransition() {
