@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Arrow } from "@/components/arrow";
 import { Button } from "@/components/ui/button";
 import { BriefReveal } from "@/modules/cta";
@@ -58,7 +59,8 @@ export function ContactPage() {
             {backdropWorks.map((project, index) => (
               <div
                 key={`${project.id}-${index}`}
-                className={`relative overflow-hidden bg-white [container-type:size] ${tileVisibility(index)}`}
+                className={`work-wall-tile relative overflow-hidden bg-white [container-type:size] ${tileVisibility(index)}`}
+                style={{ "--i": index } as CSSProperties}
               >
                 <LiveFrame
                   url={project.url}

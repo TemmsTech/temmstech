@@ -62,14 +62,18 @@ export function LiveFrame({
   return (
     <div className={className}>
       <div ref={box} className="relative aspect-[12/7] overflow-hidden bg-ink">
-        {!loaded && (
-          <p
-            className="absolute inset-0 grid place-items-center text-sm text-white/70"
-            aria-hidden="true"
-          >
-            {active ? "Opening live site…" : title}
-          </p>
-        )}
+        <div
+          className="live-frame-loading"
+          data-loaded={loaded ? "" : undefined}
+          aria-hidden="true"
+        >
+          <span className="live-frame-sheen" />
+          {controls && (
+            <p className="relative text-sm text-white/70">
+              {active ? "Opening live site…" : title}
+            </p>
+          )}
+        </div>
         {active && (
           <iframe
             key={run}
@@ -88,6 +92,7 @@ export function LiveFrame({
               // instead of getting caught inside the site.
               pointerEvents: interactive ? "auto" : "none",
               opacity: loaded ? 1 : 0,
+              transition: "opacity 500ms cubic-bezier(0.23, 1, 0.32, 1)",
             }}
           />
         )}

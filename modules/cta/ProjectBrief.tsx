@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { briefSamples } from "@/data/brief";
+import { useTypingPlaceholder } from "@/hooks";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Arrow } from "@/components/arrow";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,7 @@ export function BriefForm({
   className?: string;
   onClose?: () => void;
 }) {
+  const briefField = useRef<HTMLTextAreaElement>(null);
   const [brief, setBrief] = useState("");
   const [contact, setContact] = useState("");
   const [website, setWebsite] = useState("");
@@ -28,6 +31,8 @@ export function BriefForm({
   const [status, setStatus] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [sending, setSending] = useState(false);
+
+  useTypingPlaceholder(briefField, briefSamples);
 
   function edit(update: () => void) {
     update();
@@ -96,12 +101,13 @@ export function BriefForm({
       </p>
       <textarea
         id="project-brief"
+        ref={briefField}
         aria-describedby="brief-help"
         value={brief}
         onChange={(event) => edit(() => setBrief(event.target.value))}
         rows={5}
         className="glass-field mt-4 resize-none"
-        placeholder={"Hello TemmsTech team,\nWe’d like a website or app for our business, connected to our current tools, with some AI or automation. Could we talk?\nKind regards,\nYour name"}
+        placeholder={briefSamples[0]}
       />
 
       <div className="mt-6">
@@ -118,7 +124,7 @@ export function BriefForm({
           value={contact}
           onChange={(event) => edit(() => setContact(event.target.value))}
           className="glass-field mt-2"
-          placeholder="Email or phone / WhatsApp"
+          placeholder="Email or Phone Number"
         />
         {/* Honeypot: hidden from people, tempting to bots. */}
         <input

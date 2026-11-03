@@ -14,7 +14,7 @@ const PHONE = /^\+?[\d\s().-]{7,20}$/;
 const MIN_INTERVAL_MS = 30_000;
 let lastSentAt = 0;
 
-/** Accepts one email address or one phone/WhatsApp number. */
+/** Accepts one email address or one phone number. */
 export function isValidContact(value: string) {
   const text = value.trim();
   return EMAIL.test(text) || (PHONE.test(text) && /\d{7,}/.test(text.replace(/\D/g, "")));

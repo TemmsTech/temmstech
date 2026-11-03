@@ -846,6 +846,79 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   }
 }
 
+/* Contact hero wall of work: every tile starts as a small dot, then the dots open
+   into the full grid one after another. Plain CSS, so it plays on first paint. */
+@keyframes wall-tile-open {
+  from {
+    clip-path: inset(calc(50% - 5px) round 999px);
+    scale: 0.5;
+  }
+  to {
+    clip-path: inset(0 round 0);
+    scale: 1;
+  }
+}
+@keyframes wall-tile-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-wall-tile {
+    animation: wall-tile-open 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation-delay: calc(350ms + var(--i) * 45ms);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-wall-tile {
+    animation: wall-tile-fade 300ms ease backwards;
+  }
+}
+
+/* Loading state for a live site frame: a soft sheen sweeps across while the
+   site opens, then the placeholder fades away as the site fades in. */
+@keyframes live-frame-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.live-frame-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity 400ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 400ms;
+}
+.live-frame-loading[data-loaded] {
+  opacity: 0;
+  visibility: hidden;
+}
+.live-frame-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.1) 50%,
+    transparent 70%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-frame-sheen {
+    animation: live-frame-sheen 1400ms linear infinite;
+  }
+}
+
 /* Contact hero: the three tiles drift up and down out of step, with a slow push-in on each photo. */
 @keyframes contact-float {
   from {

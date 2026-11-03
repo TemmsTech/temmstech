@@ -10,3 +10,5 @@ export { useScrollSpy } from "./use-scroll-spy";
 export { usePageStartNavigation } from "./use-page-start-navigation";
 
 export { useDeviceKind } from "./use-device-kind";
+
+export { useTypingPlaceholder } from "./use-typing-placeholder";
