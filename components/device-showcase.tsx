@@ -17,9 +17,12 @@ import {
   watchPointerHover,
 } from "@/lib/showcase-events";
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
+import "./screen-brave.css";
 import "./screen-desktop.css";
 import "./screen-explorer.css";
+import "./screen-granola.css";
 import "./screen-terminal.css";
+import "./screen-whatsapp.css";
 import "./screen-vscode.css";
 
 type DeviceShowcaseProps = {
@@ -85,7 +88,9 @@ export function DeviceShowcase({
     if (!element) return;
     return watchPointerHover(element, setHovering);
   }, []);
+  // The laptop's browser stays on the tab the visitor picks; it no longer cycles.
   const autoplay =
+    kind !== "laptop" &&
     !reducedMotion &&
     status !== "loading" &&
     !holding &&

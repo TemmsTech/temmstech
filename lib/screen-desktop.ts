@@ -122,9 +122,18 @@ export type ScreenDesktop = {
   explorerButton: HTMLElement;
   /** The Terminal taskbar button (Windows desktop only). */
   terminalButton: HTMLElement;
+  /** The WhatsApp taskbar button (Windows desktop only). */
+  whatsappButton: HTMLElement;
+  /** The Brave taskbar button (Windows desktop only). */
+  braveButton: HTMLElement;
+  /** The Granola taskbar button (Windows desktop only). */
+  granolaButton: HTMLElement;
   setCode: (code: DesktopApp) => void;
   setExplorer: (explorer: DesktopApp) => void;
   setTerminal: (terminal: DesktopApp) => void;
+  setWhatsApp: (whatsapp: DesktopApp) => void;
+  setBrave: (brave: DesktopApp) => void;
+  setGranola: (granola: DesktopApp) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -145,6 +154,16 @@ type DesktopHandlers = {
   onExplorer: () => void;
   /** The Terminal taskbar button was pressed. */
   onTerminal: () => void;
+  /** The WhatsApp taskbar button was pressed. */
+  onWhatsApp: () => void;
+  /** The Brave taskbar button was pressed. */
+  onBrave: () => void;
+  /** The Brave desktop icon was double-clicked. */
+  onOpenBrave: () => void;
+  /** The Granola taskbar button was pressed. */
+  onGranola: () => void;
+  /** The Granola desktop icon was double-clicked. */
+  onOpenGranola: () => void;
 };
 
 /**
@@ -156,7 +175,20 @@ type DesktopHandlers = {
 export function createScreenDesktop(
   host: HTMLElement,
   style: DesktopStyle,
-  { onApp, onOpen, onVideo, onCode, onOpenCode, onExplorer, onTerminal }: DesktopHandlers,
+  {
+    onApp,
+    onOpen,
+    onVideo,
+    onCode,
+    onOpenCode,
+    onExplorer,
+    onTerminal,
+    onWhatsApp,
+    onBrave,
+    onOpenBrave,
+    onGranola,
+    onOpenGranola,
+  }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
   const element = create("div", "screen-desktop");
@@ -177,6 +209,8 @@ export function createScreenDesktop(
   appIcon.querySelector(".screen-desktop-glyph")?.appendChild(logo);
   const icons = [appIcon];
   let codeIcon: HTMLButtonElement | undefined;
+  let braveIcon: HTMLButtonElement | undefined;
+  let granolaIcon: HTMLButtonElement | undefined;
   if (!mac) {
     // Laid out like the real desktop: columns of eight, filled top to bottom,
     // with Temms Tech and Visual Studio Code after the last of them.
@@ -185,15 +219,12 @@ export function createScreenDesktop(
       holder("screen-desktop-glyph", sprite("bar", BAR.code)),
       "Visual Studio Code",
     );
-    icons.splice(
-      0,
-      1,
-      ...DESKTOP_ICONS.map((name, index) =>
-        iconButton(name, holder("screen-desktop-glyph", sprite("desk", index)), name),
-      ),
-      appIcon,
-      codeIcon,
+    const desktopIcons = DESKTOP_ICONS.map((name, index) =>
+      iconButton(name, holder("screen-desktop-glyph", sprite("desk", index)), name),
     );
+    braveIcon = desktopIcons[DESKTOP_ICONS.indexOf("Brave")];
+    granolaIcon = desktopIcons[DESKTOP_ICONS.indexOf("Granola")];
+    icons.splice(0, 1, ...desktopIcons, appIcon, codeIcon);
   }
   const iconColumn = create("div", "screen-desktop-icons");
   iconColumn.append(...icons);
@@ -236,6 +267,19 @@ export function createScreenDesktop(
   );
   terminalButton.dataset.state = "closed";
   terminalButton.setAttribute("aria-label", "Open Terminal");
+  const whatsappButton = taskbarButton(
+    "screen-desktop-whatsapp",
+    sprite("bar", BAR.whatsapp),
+    onWhatsApp,
+  );
+  whatsappButton.dataset.state = "closed";
+  whatsappButton.setAttribute("aria-label", "Open WhatsApp");
+  const braveButton = taskbarButton("screen-desktop-brave", sprite("bar", BAR.brave), onBrave);
+  braveButton.dataset.state = "closed";
+  braveButton.setAttribute("aria-label", "Open Brave");
+  const granolaButton = taskbarButton("screen-desktop-granola", sprite("bar", BAR.granola), onGranola);
+  granolaButton.dataset.state = "closed";
+  granolaButton.setAttribute("aria-label", "Open Granola");
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -308,11 +352,11 @@ export function createScreenDesktop(
       item(BAR.store),
       item(BAR.teams),
       codeButton,
-      item(BAR.brave),
+      braveButton,
       terminalButton,
-      item(BAR.granola),
+      granolaButton,
       item(BAR.chat),
-      item(BAR.whatsapp),
+      whatsappButton,
       videoButton,
     );
     const trayBox = create("div", "screen-tray");
@@ -340,6 +384,8 @@ export function createScreenDesktop(
       select(icon);
       if (again && icon === appIcon) onOpen();
       if (again && icon === codeIcon) onOpenCode();
+      if (again && icon === braveIcon) onOpenBrave();
+      if (again && icon === granolaIcon) onOpenGranola();
     });
   }
   // A press anywhere else on the device clears the selection (presses on the
@@ -354,6 +400,30 @@ export function createScreenDesktop(
     codeButton,
     explorerButton,
     terminalButton,
+    whatsappButton,
+    braveButton,
+    granolaButton,
+    setGranola(granola) {
+      granolaButton.dataset.state = granola;
+      granolaButton.setAttribute(
+        "aria-label",
+        granola === "open" ? "Minimise Granola" : "Open Granola",
+      );
+      if (granola !== "open") select();
+    },
+    setBrave(brave) {
+      braveButton.dataset.state = brave;
+      braveButton.setAttribute("aria-label", brave === "open" ? "Minimise Brave" : "Open Brave");
+      if (brave !== "open") select();
+    },
+    setWhatsApp(whatsapp) {
+      whatsappButton.dataset.state = whatsapp;
+      whatsappButton.setAttribute(
+        "aria-label",
+        whatsapp === "open" ? "Minimise WhatsApp" : "Open WhatsApp",
+      );
+      if (whatsapp !== "open") select();
+    },
     setTerminal(terminal) {
       terminalButton.dataset.state = terminal;
       terminalButton.setAttribute(

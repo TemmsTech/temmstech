@@ -4,8 +4,11 @@ import {
   type DesktopOption,
 } from "@/lib/screen-desktop";
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
+import { createScreenBrave } from "@/lib/screen-brave";
 import { createScreenExplorer } from "@/lib/screen-explorer";
+import { createScreenGranola } from "@/lib/screen-granola";
 import { createScreenTerminal } from "@/lib/screen-terminal";
+import { createScreenWhatsApp } from "@/lib/screen-whatsapp";
 import { createScreenVideoPlayer } from "@/lib/screen-video-player";
 import { createScreenVsCode } from "@/lib/screen-vscode";
 import {
@@ -239,6 +242,11 @@ export function createScreenBrowser(
         onOpenCode: () => code?.open(),
         onExplorer: () => explorer?.toggle(),
         onTerminal: () => terminal?.toggle(),
+        onWhatsApp: () => whatsapp?.toggle(),
+        onBrave: () => brave?.toggle(),
+        onOpenBrave: () => brave?.open(),
+        onGranola: () => granola?.toggle(),
+        onOpenGranola: () => granola?.open(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -246,7 +254,7 @@ export function createScreenBrowser(
     root.dataset.top = "browser";
     root.insertBefore(desk.element, win);
   }
-  // Static VS Code, File Explorer and Terminal windows, on the Windows desktop only.
+  // Static VS Code, File Explorer, Terminal, WhatsApp, Brave and Granola windows, on the Windows desktop only.
   // Whichever window was opened last sits on top (see raise).
   const code =
     desk && desktopStyle === "windows"
@@ -279,10 +287,40 @@ export function createScreenBrowser(
           },
         })
       : undefined;
+  const whatsapp =
+    desk && desktopStyle === "windows"
+      ? createScreenWhatsApp(root, {
+          target: () => centreOf(desk.whatsappButton, root),
+          onChange: (state) => {
+            desk.setWhatsApp(state);
+            if (state === "open") raise("whatsapp");
+          },
+        })
+      : undefined;
+  const brave =
+    desk && desktopStyle === "windows"
+      ? createScreenBrave(root, {
+          target: () => centreOf(desk.braveButton, root),
+          onChange: (state) => {
+            desk.setBrave(state);
+            if (state === "open") raise("brave");
+          },
+        })
+      : undefined;
+  const granola =
+    desk && desktopStyle === "windows"
+      ? createScreenGranola(root, {
+          target: () => centreOf(desk.granolaButton, root),
+          onChange: (state) => {
+            desk.setGranola(state);
+            if (state === "open") raise("granola");
+          },
+        })
+      : undefined;
 
   // The windows' stacking order, lowest first; z-index 1.. follows it, below
   // the video layer. Opening or restoring a window moves it to the end.
-  type AppName = "browser" | "code" | "explorer" | "terminal";
+  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola";
   const stack: AppName[] = ["browser"];
   function raise(name: AppName) {
     const at = stack.indexOf(name);
@@ -294,6 +332,9 @@ export function createScreenBrowser(
       code: code?.element,
       explorer: explorer?.element,
       terminal: terminal?.element,
+      whatsapp: whatsapp?.element,
+      brave: brave?.element,
+      granola: granola?.element,
     };
     stack.forEach((app, index) => {
       const layer = layers[app];
@@ -541,6 +582,7 @@ export function createScreenBrowser(
       player?.setLive(enabled);
       code?.setLive(enabled);
       terminal?.setLive(enabled);
+      granola?.setLive(enabled);
       if (enabled) mountFrame(active);
       announceWindow();
     },
@@ -555,6 +597,9 @@ export function createScreenBrowser(
       code?.dispose();
       explorer?.dispose();
       terminal?.dispose();
+      whatsapp?.dispose();
+      brave?.dispose();
+      granola?.dispose();
       player?.dispose();
       frames.clear();
       root.remove();
