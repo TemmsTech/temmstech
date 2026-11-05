@@ -23,7 +23,7 @@ export function ProjectPreview({ kind }: { kind: Project["kind"] }) {
                 <br />
                 better.
               </p>
-              <span className="mock-action">Explore the collection ↗</span>
+              <span className="mock-action">Explore the collection</span>
             </div>
             <div className="mock-vase">
               <div />
@@ -51,14 +51,14 @@ export function ProjectPreview({ kind }: { kind: Project["kind"] }) {
               <span className="mock-course-icon">Aa</span>
               <div>
                 <strong>Design fundamentals</strong>
-                <span>Continue exploring →</span>
+                <span>Continue exploring</span>
               </div>
             </div>
             <div className="mock-course small">
               <span className="mock-course-icon">⌘</span>
               <div>
                 <strong>Ideas into interfaces</strong>
-                <span>Start a new chapter →</span>
+                <span>Start a new chapter</span>
               </div>
             </div>
           </div>

@@ -56,6 +56,21 @@ export const contactIntro = {
   title: "What should we build next?",
   description: "Bring the idea. Bring the challenge. We’ll bring the team.",
 } satisfies SectionIntro;
+export const contactPoints = [
+  {
+    title: "Tell us the problem",
+    description: "A few lines are enough. No polished pitch required.",
+  },
+  {
+    title: "Work through it together",
+    description:
+      "Agree on priorities, scope, and what a useful outcome looks like.",
+  },
+  {
+    title: "Review something real early",
+    description: "Four stages, with something useful to review at every step.",
+  },
+] satisfies readonly { title: string; description: string }[];
 
 export const conceptsIntro = {
   id: "concepts",

@@ -13,7 +13,7 @@ Keep E2E tests under `tests/e2e/<feature>.spec.ts`. Assert user-observable outco
 
 The homepage suite owns loading, section reachability, runtime errors, overflow, desktop/mobile anchor navigation, Escape/focus behavior, keyboard skipping, sample disclosures, and the project-brief action. Account for state-dependent accessible names in toggle locators. Browser projects request reduced motion for deterministic anchor navigation; inspect normal motion separately. Clipboard tests grant browser permissions and verify the copied text. Never treat copying or opening an email draft as successful submission. Add tests for meaningful new navigation, forms, error states, and interactions. Extract fixtures/helpers only once repeated setup warrants it. No empty helper frameworks.
 
-Device tests cover WebGL readiness, automatic website playback, unavailable-model fallback, reduced motion, and normal-motion scroll reversal. Inspect screens visually for capture timing and UV orientation. E2E uses local captures rather than external websites.
+Device tests cover WebGL readiness, automatic website playback, unavailable-model fallback, reduced motion, and normal-motion scroll reversal. Inspect screens visually for capture timing and UV orientation. E2E uses local captures for the hero devices; live work frames point at external sites, so tests assert on the frame elements and should stub those URLs rather than depend on the network.
 
 Tablet transition tests cover in-screen content, viewport fill, interactive handoff, reversal, reduced motion, and failed model loading across the configured viewport projects. Scope portal locators to their owning transition.
 
@@ -34,3 +34,9 @@ Scroll-spy tests cover all supporting routes: anchor selection, manual scroll re
 Direct hash-navigation checks wait for the document load event before asserting native anchor placement; DOMContentLoaded alone does not guarantee the browser has positioned the fragment. A delayed model fetch remains gated independently.
 
 The homepage must not render Product Explorations; sample-concept disclosure checks use /work. Section-reveal checks on /approach cover expansion, interactive handoff, reversal, inert/ID-free previews, reduced motion, and direct links. Exercise large real wheel gestures as well as programmatic scroll positions to verify pacing.
+
+`tests/e2e/screen-brave.spec.ts` covers the laptop's Brave window: the taskbar button opens it, its three tabs swap the page and address, the middle button toggles windowed and full, minimising keeps the tab, closing resets to the first tab, and the Brave desktop icon (two quick clicks) opens it again. It uses DOM `click()` calls and needs normal motion and the WebGL model to be ready.
+
+`tests/e2e/screen-explorer.spec.ts` covers the laptop's File Explorer window: the taskbar button opens it, the middle button snaps it to the right half and back, there is no simulated pointer and nothing opens by itself, a double-click opens the `app` folder and then `layout`, which opens in VS Code (typing itself out) and minimises Explorer, a click on a tree row in VS Code opens another file, and closing VS Code returns it to AboutHero.jsx. It drives the simulated screen with DOM `click()` calls because the screen is projected in 3D, and it needs normal motion and the WebGL model to be ready.
+
+`tests/e2e/screen-granola.spec.ts` covers the laptop's Granola window: the taskbar button opens it, the "Ask anything" question types itself, the middle button toggles windowed and full, minimising shrinks into the button and the button restores it, closing starts it over, and the Granola desktop icon (two quick clicks) opens it again. It uses DOM `click()` calls and needs normal motion and the WebGL model to be ready.

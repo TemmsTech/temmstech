@@ -1,18 +1,40 @@
 "use client";
-import Image from "next/image";
+import { LiveFrame } from "@/components/live-frame";
 import { useEffect, useRef, useState } from "react";
-import { useDeviceMotion, useMediaQuery, useShowcasePlayback } from "@/hooks";
+import {
+  useDeviceKind,
+  useDeviceMotion,
+  useMediaQuery,
+  useShowcasePlayback,
+} from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
-import type { ShowcaseProject } from "@/types/showcase";
+import { SHOWCASE_INTERVAL_MS } from "@/lib/showcase-timing";
+import { onShowcasePlayer } from "@/lib/screen-video-player";
+import {
+  onShowcaseTab,
+  onShowcaseWindow,
+  watchPointerHover,
+} from "@/lib/showcase-events";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
+import "./screen-brave.css";
+import "./screen-desktop.css";
+import "./screen-explorer.css";
+import "./screen-granola.css";
+import "./screen-terminal.css";
+import "./screen-whatsapp.css";
+import "./screen-vscode.css";
 
 type DeviceShowcaseProps = {
   projects: readonly ShowcaseProject[];
+  /** Plays once in a miniature player on the screens, then minimises. */
+  video?: ShowcaseVideo;
   className?: string;
   nextSectionId: string;
 };
 export function DeviceShowcase({
   projects,
+  video,
   className,
   nextSectionId,
 }: DeviceShowcaseProps) {
@@ -20,30 +42,106 @@ export function DeviceShowcase({
   const section = useRef<HTMLDivElement>(null);
   const scene = useRef<DeviceScene | null>(null);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", true);
+  const kind = useDeviceKind();
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
   );
-  const [index] = useShowcasePlayback(
+  // The tab timer waits while the device is being turned by hand.
+  const [holding, setHolding] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const release = () => {
+      setHolding(false);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+    const press = () => {
+      setHolding(true);
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
+    };
+    element.addEventListener("pointerdown", press);
+    return () => {
+      element.removeEventListener("pointerdown", press);
+      release();
+    };
+  }, []);
+  // The tabs hold still while the screen's video player is open.
+  const [playerOpen, setPlayerOpen] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcasePlayer(element, setPlayerOpen);
+  }, []);
+  // ...and while the browser window is minimised or closed to the desktop.
+  const [windowHidden, setWindowHidden] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcaseWindow(element, setWindowHidden);
+  }, []);
+  // ...and while a mouse is over the device, so a tab never changes under it.
+  const [hovering, setHovering] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return watchPointerHover(element, setHovering);
+  }, []);
+  // The laptop's browser stays on the tab the visitor picks; it no longer cycles.
+  const autoplay =
+    kind !== "laptop" &&
+    !reducedMotion &&
+    status !== "loading" &&
+    !holding &&
+    !playerOpen &&
+    !windowHidden &&
+    !hovering;
+  const [index, setIndex] = useShowcasePlayback(
     section,
-    !reducedMotion && status === "ready",
+    autoplay,
     projects.length,
-    7000,
+    SHOWCASE_INTERVAL_MS,
   );
+  // Clicking a tab on the simulated screen opens that site.
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcaseTab(element, (at) => {
+      if (at >= 0 && at < projects.length) setIndex(at);
+    });
+  }, [projects.length, setIndex]);
+  // The simulated pointer only plays while the tabs rotate on their own.
+  const autoplayRef = useRef(autoplay);
+  useEffect(() => {
+    autoplayRef.current = autoplay;
+    scene.current?.setAutoplay(autoplay);
+  }, [autoplay, status]);
   const project = projects[index] ?? projects[0];
   useEffect(() => {
     const element = host.current;
     if (!element || !projects.length) return;
     const controller = new AbortController();
     let created: DeviceScene | undefined;
-    import("@/lib/device-scene")
-      .then(({ createDeviceScene }) => {
+    // Tablets get their own tablet; phones and laptops share one scene.
+    const load =
+      kind === "tablet"
+        ? import("@/lib/tablet-hero-scene").then(
+            (module) => module.createTabletHeroScene,
+          )
+        : import("@/lib/device-scene").then(
+            (module) => module.createDeviceScene,
+          );
+    load
+      .then((createScene) => {
         if (!controller.signal.aborted)
-          return createDeviceScene(
+          return createScene(
             element,
             projects,
             controller.signal,
             () => setStatus("fallback"),
             nextSectionId,
+            video,
           );
       })
       .then((result) => {
@@ -54,6 +152,7 @@ export function DeviceShowcase({
           return;
         }
         scene.current = result;
+        result.setAutoplay(autoplayRef.current);
         setStatus("ready");
       })
       .catch(() => {
@@ -64,7 +163,7 @@ export function DeviceShowcase({
       created?.dispose();
       scene.current = null;
     };
-  }, [projects, nextSectionId]);
+  }, [projects, nextSectionId, kind, video]);
   useEffect(() => {
     scene.current?.setProject(index, !reducedMotion);
   }, [index, reducedMotion, status]);
@@ -75,36 +174,49 @@ export function DeviceShowcase({
       <div
         className="device-stage relative"
         role="img"
-        aria-label={`Laptop and iPhone displaying the website: ${project.title}`}
+        aria-label={`Device preview of the website: ${project.title}`}
         data-renderer={status}
       >
         <div
           ref={host}
           className={cn("absolute inset-0", status !== "ready" && "invisible")}
         />
-        {status !== "ready" && (
+        {status === "ready" && (
+          <p className="device-hint" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            >
+              <path d="m5 3 14 7-6 2.2L10.8 19 5 3Zm8 9.2 5 5" />
+            </svg>
+            Zoom in &amp; interact
+          </p>
+        )}
+        {status === "fallback" && (
           <div className="device-fallback" aria-hidden="true">
-            {(["desktop", "mobile"] as const).map((size) => (
-              <div
-                key={size}
-                className={
-                  size === "desktop" ? "fallback-laptop" : "fallback-phone"
-                }
-              >
-                <Image
-                  src={
-                    size === "desktop"
-                      ? project.desktopImage
-                      : project.mobileImage
-                  }
-                  alt=""
-                  fill
-                  sizes={size === "desktop" ? "600px" : "180px"}
-                  unoptimized
-                  loading="eager"
-                />
-              </div>
-            ))}
+            <div className="fallback-laptop">
+              <LiveFrame
+                key={`${project.id}-desktop`}
+                url={project.url}
+                title={project.title}
+                controls={false}
+              />
+            </div>
+            <div className="fallback-phone">
+              <LiveFrame
+                key={`${project.id}-mobile`}
+                url={project.url}
+                title={project.title}
+                controls={false}
+                siteWidth={390}
+                aspect={600 / 1295}
+              />
+            </div>
           </div>
         )}
       </div>

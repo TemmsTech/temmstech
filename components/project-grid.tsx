@@ -41,7 +41,7 @@ export function ProjectGrid({
           <Button
             type="button"
             size="lg"
-            variant="outline"
+            variant="ink"
             onClick={() =>
               setVisibleCount((count) =>
                 Math.min(count + batch, projects.length),

@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const [path, title] of [
   ["capabilities", "Big ideas need more than one kind of thinking."],
   ["work", "Ideas, out in the world."],
-  ["approach", "From the first question to the next release."],
+  ["approach", "From the first idea, To launch & beyond."],
   ["contact", "Your next idea starts with a conversation."],
 ]) {
   test(`${path} page loads directly and links home`, async ({ page }) => {
@@ -32,7 +32,7 @@ test("work separates supplied websites from sample concepts", async ({
 }) => {
   await page.goto("/work");
   const work = page.locator("#work");
-  await expect(work.getByRole("article")).toHaveCount(6);
+  await expect(work.getByRole("article")).toHaveCount(8);
   for (const [name, url] of [
     ["Don Elclasico Wears", "https://donelclasico.netlify.app"],
     ["Santy Stitches", "https://santystitches.netlify.app"],
@@ -40,6 +40,8 @@ test("work separates supplied websites from sample concepts", async ({
     ["NaijaLearn", "https://naijalearn.netlify.app/"],
     ["Makinde Bibitayo", "https://makindebibitayo.netlify.app/"],
     ["MOG", "https://mog-nine.vercel.app/"],
+    ["CMWG Travel", "https://cmwgtours.netlify.app"],
+    ["Proximity News", "https://proximitynews.netlify.app"],
   ]) {
     const link = work.getByRole("link", {
       name: `Visit ${name} website (opens in a new tab)`,
@@ -59,11 +61,11 @@ test("homepage reveals previous work in batches of four", async ({ page }) => {
   await expect(work.getByRole("article")).toHaveCount(4);
   await expect(work.getByRole("article").first()).toContainText("MOG");
   await expect(
-    work.getByRole("img", { name: "Makinde Bibitayo website preview" }),
+    work.getByRole("article").filter({ hasText: "Makinde Bibitayo" }),
   ).toHaveCount(0);
   await work.getByRole("button", { name: "Show more", exact: true }).click();
-  await expect(work.getByRole("article")).toHaveCount(6);
-  await expect(work.getByRole("status")).toHaveText("Showing 6 of 6 projects.");
+  await expect(work.getByRole("article")).toHaveCount(8);
+  await expect(work.getByRole("status")).toHaveText("Showing 8 of 8 projects.");
   await expect(
     work.getByRole("link", {
       name: "Visit NaijaLearn website (opens in a new tab)",
@@ -88,12 +90,13 @@ test("supporting pages provide their own deeper content", async ({ page }) => {
   ).toBeAttached();
   await expect(page.getByText(/Release checklist/)).toBeAttached();
   await page.goto("/contact");
+  await page.getByRole("link", { name: /Prepare your brief/ }).click();
   await expect(page.getByLabel("What would you like to solve?")).toBeVisible();
   await page
     .getByLabel("What would you like to solve?")
     .fill("A clearer ordering workflow.");
   await expect(
-    page.getByRole("button", { name: "Copy project brief" }),
+    page.getByRole("button", { name: "Send project brief" }),
   ).toBeEnabled();
 });
 
@@ -131,4 +134,14 @@ test("navbar navigation starts each destination at the top", async ({
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await expect(page.getByRole("heading", { level: 1 })).toBeInViewport();
   }
+});
+
+test("start links open the nearest brief form", async ({ page }) => {
+  await page.goto("/approach");
+  await page.getByRole("link", { name: /Tell us about your project/ }).click();
+  await expect(page).toHaveURL(/\/contact#contact$/);
+  await expect(page.getByLabel("What would you like to solve?")).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("link", { name: /Let’s talk/ }).click();
+  await expect(page).toHaveURL(/\/contact$/);
 });

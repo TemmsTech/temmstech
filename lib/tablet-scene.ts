@@ -19,11 +19,23 @@ export type TabletScene = {
   dispose: () => void;
 };
 
+/**
+ * Horizontal shift of the preview on the phone once it faces the camera, as a
+ * fraction of the screen's width (positive = right, negative = left). The
+ * preview is built from the screen's own corners, so 0 lines it up with the
+ * glass exactly. If it ever looks off, nudge this a little instead of
+ * changing the corners.
+ */
+const PHONE_NUDGE = 0;
+
+export type TransitionDevice = "tablet" | "phone";
+
 export async function createTabletScene(
   host: HTMLElement,
   sectionId: string,
   signal: AbortSignal,
   onFailure: () => void,
+  device: TransitionDevice = "tablet",
 ): Promise<TabletScene> {
   const renderer = new WebGLRenderer({
     alpha: true,
@@ -57,47 +69,51 @@ export async function createTabletScene(
     renderer.domElement.remove();
   };
   try {
+    const phone = device === "phone";
     const { scene: model } = await new GLTFLoader().loadAsync(
-      "/models/microsoft-tablet.glb",
+      phone ? "/models/iphone-16.glb" : "/models/microsoft-tablet.glb",
     );
     stage.add(model);
-    if (signal.aborted) throw new Error("Tablet loading cancelled");
-    model.rotation.set(Math.PI, 0, 0);
-    model.scale.setScalar(22);
+    if (signal.aborted) throw new Error("Device loading cancelled");
+    // The tablet model is authored upside down; the phone already faces +z.
+    if (!phone) model.rotation.set(Math.PI, 0, 0);
+    model.scale.setScalar(phone ? 0.1 : 22);
     model.updateMatrixWorld(true);
     const center = new Box3().setFromObject(model).getCenter(new Vector3());
     model.position.sub(center);
     model.updateMatrixWorld(true);
     const display = new Box3();
-    model.traverse((child) => {
-      if (
-        child instanceof Mesh &&
-        !Array.isArray(child.material) &&
-        child.material.name === "Material0_1"
-      )
-        display.setFromObject(child);
-    });
-    if (display.isEmpty()) throw new Error("Tablet display missing");
-    // This model's front glass includes its bezel; keep the preview inside it.
+    if (phone) {
+      const screen = model.getObjectByName("Object_18");
+      if (screen instanceof Mesh) display.setFromObject(screen);
+    } else {
+      model.traverse((child) => {
+        if (
+          child instanceof Mesh &&
+          !Array.isArray(child.material) &&
+          child.material.name === "Material0_1"
+        )
+          display.setFromObject(child);
+      });
+    }
+    if (display.isEmpty()) throw new Error("Device display missing");
+    // The tablet's glass includes its bezel, so keep the preview inside it.
+    // The phone's display mesh is the screen itself.
     const size = display.getSize(new Vector3());
-    const insetX = size.x * 0.055,
-      insetY = size.y * 0.07;
-    const left = display.min.x + insetX,
-      right = display.max.x - insetX;
+    const insetX = phone ? 0 : size.x * 0.055,
+      insetY = phone ? 0 : size.y * 0.07;
+    const baseLeft = display.min.x + insetX,
+      baseRight = display.max.x - insetX;
     const top = display.max.y - insetY,
       bottom = display.min.y + insetY;
     const z = display.max.z + 0.002;
-    const corners = [
-      new Vector3(left, top, z),
-      new Vector3(right, top, z),
-      new Vector3(right, bottom, z),
-      new Vector3(left, bottom, z),
-    ] as const;
-    const centerScreen = new Vector3((left + right) / 2, (top + bottom) / 2, z);
     portal = createScreenPortal(host, sectionId, {
-      aspectRatio: (right - left) / (top - bottom),
+      aspectRatio: (baseRight - baseLeft) / (top - bottom),
+      // A phone's screen is tall: fill it with the next sections too.
+      fillScreen: phone,
       backdrop: false,
       settleFrom: 0.7,
+      keepPageWidth: phone,
       refreshOnEntry: true,
     });
     host.prepend(renderer.domElement);
@@ -110,7 +126,8 @@ export async function createTabletScene(
     return {
       render(progress, stripHeight) {
         if (disposed) return;
-        const width = innerWidth;
+        // The host is as wide as the page content (no scrollbar); project into that.
+        const width = host.clientWidth;
         const height = Math.max(Math.round(stripHeight), 1);
         if (width !== lastWidth || height !== lastHeight) {
           renderer.setSize(width, height, false);
@@ -123,14 +140,32 @@ export async function createTabletScene(
           size.x / (2 * tangent * camera.aspect * 0.68),
           size.y / (2 * tangent * 0.68),
         );
-        const finalDistance =
-          Math.min(
-            (right - left) / (2 * tangent * camera.aspect),
-            (top - bottom) / (2 * tangent),
-          ) * 0.98;
+        // A phone's screen is tall and narrow: end with its width matching the
+        // page width exactly (the height runs past the viewport), so the
+        // preview lands 1:1 on the real section.
+        const widthFit = (baseRight - baseLeft) / (2 * tangent * camera.aspect);
+        const finalDistance = phone
+          ? widthFit
+          : Math.min(widthFit, (top - bottom) / (2 * tangent)) * 0.98;
         const enter = smooth(progress / 0.12);
         const face = smooth((progress - 0.35) / 0.4);
         const zoom = smooth((progress - 0.7) / 0.3);
+        // The corners and the camera framing share this shift, so the zoom
+        // still ends exactly on the real section.
+        const shift = phone ? size.x * PHONE_NUDGE * face : 0;
+        const left = baseLeft + shift,
+          right = baseRight + shift;
+        const corners = [
+          new Vector3(left, top, z),
+          new Vector3(right, top, z),
+          new Vector3(right, bottom, z),
+          new Vector3(left, bottom, z),
+        ];
+        const centerScreen = new Vector3(
+          (left + right) / 2,
+          (top + bottom) / 2,
+          z,
+        );
         stage.position.y = -(1 - enter) * initialDistance * tangent * 2.1;
         stage.rotation.x = (1 - face) * (Math.PI / 2 - 0.035);
         stage.rotation.z = (1 - enter) * 0.04;
@@ -156,7 +191,7 @@ export async function createTabletScene(
         portal?.update(
           [projected[0], projected[1], projected[2], projected[3]],
           progress,
-          false,
+          phone,
         );
       },
       hide() {

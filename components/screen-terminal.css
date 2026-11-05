@@ -1,0 +1,220 @@
+/* The static Windows Terminal window on the Windows desktop (lib/screen-terminal.ts).
+   Same 1280px layout units as .screen-browser. Only transforms and opacity
+   animate. Colours are sampled from a Windows Terminal screenshot (Campbell
+   scheme); sizes are that screenshot at 1920px scaled by two thirds. */
+
+.screen-terminal {
+  position: absolute;
+  inset: 0 0 var(--desk-bottom, 48px) 0;
+  z-index: 3;
+  /* The root only holds the window; presses fall through to the desktop. */
+  pointer-events: none;
+}
+.tm-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0c0c0c;
+  color: #cccccc;
+  font: 10.5px/1.3 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  pointer-events: auto;
+  transform-origin: 50% 50%;
+  transform: translate(0, 0) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+/* Windowed is snapped to the left half; the lines wrap like the real one. */
+.screen-terminal[data-window="windowed"] .tm-window {
+  right: 50%;
+  border: 1px solid #757575;
+}
+.screen-terminal:is([data-window="minimised"], [data-window="closed"]) .tm-window {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+/* Snapping between full and half: the window eases in from the side it came from. */
+.screen-terminal[data-snap="windowed"] .tm-window {
+  animation: tm-to-half 320ms var(--ease-out);
+}
+.screen-terminal[data-snap="full"] .tm-window {
+  animation: tm-to-full 320ms var(--ease-out);
+}
+@keyframes tm-to-half {
+  from {
+    translate: 16% 0;
+  }
+}
+@keyframes tm-to-full {
+  from {
+    scale: 0.9 1;
+    translate: -6% 0;
+  }
+}
+
+/* ---- Tab strip and window buttons ------------------------------------------ */
+.tm-tabs {
+  display: flex;
+  height: 26px;
+  flex: none;
+  align-items: flex-end;
+  padding-left: 7px;
+  background: #333333;
+}
+/* Not maximised: the strip has a little drag area above the tab. */
+.screen-terminal[data-window="windowed"] .tm-tabs {
+  height: 34px;
+}
+.tm-tab {
+  display: flex;
+  width: 200px;
+  height: 26px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px 0 8px;
+  border-radius: 6px 6px 0 0;
+  background: #0c0c0c;
+  color: #fff;
+}
+.tm-tab svg {
+  flex: none;
+}
+.tm-tab-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-tab i {
+  color: #c1c1c1;
+  font-size: 13px;
+  font-style: normal;
+}
+.tm-tab-add {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  color: #c1c1c1;
+  font-size: 15px;
+  place-items: center;
+}
+.tm-controls {
+  display: flex;
+  height: 100%;
+  margin-left: auto;
+  align-self: stretch;
+}
+.tm-control {
+  display: grid;
+  width: 39px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cfcfcf;
+  font: inherit;
+  cursor: default;
+  place-items: center;
+}
+.tm-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.tm-control[data-control="close"]:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+.tm-control svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- The terminal itself -------------------------------------------------- */
+.tm-body {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+.tm-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 3px 7px 0;
+}
+/* Shows how far back the session reaches; moved with transform only. */
+.tm-thumb {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  width: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.35);
+  pointer-events: none;
+}
+.tm-thumb[data-show="false"] {
+  display: none;
+}
+.tm-text {
+  margin: 0;
+  font: 13.6px/15.3px "Cascadia Mono", "Cascadia Code", Consolas, Menlo, "DejaVu Sans Mono", monospace;
+  /* Lines break at any character, as a terminal's fixed columns do. */
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: none;
+}
+.tm-y {
+  color: #c19c00;
+}
+.tm-g {
+  color: #13a10e;
+}
+.tm-m {
+  color: #ad7fa8;
+}
+.tm-c {
+  color: #61d6d6;
+}
+.tm-b {
+  color: #f9f1a5;
+}
+.tm-k {
+  color: #666666;
+}
+.tm-r {
+  color: #e74856;
+}
+.tm-u {
+  color: #3a96dd;
+}
+.tm-cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.05em;
+  margin-bottom: -0.15em;
+  background: #cccccc;
+  vertical-align: baseline;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tm-cursor {
+    animation: tm-blink 1060ms steps(1, end) infinite;
+  }
+}
+@keyframes tm-blink {
+  50% {
+    opacity: 0;
+  }
+}

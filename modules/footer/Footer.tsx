@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { Arrow } from "@/components/arrow";
+import { ContactLink } from "@/components/contact-link";
 import type { NavItem, Service } from "@/types/content";
 
 type FooterProps = {
@@ -62,25 +64,38 @@ export function Footer({ navigation, services, email }: FooterProps) {
               <br />
               or a better way forward.
             </p>
-            <a
-              href={email ? `mailto:${email}` : "/contact"}
-              className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline"
-            >
-              {email ?? "Start a conversation"}{" "}
-              <span aria-hidden="true">↗</span>
-            </a>
+            {email ? (
+              <a
+                href={`mailto:${email}`}
+                className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline"
+              >
+                {email} <Arrow className="size-4" />
+              </a>
+            ) : (
+              <ContactLink className="mt-4 inline-flex min-h-11 items-center gap-3 text-sm text-brand underline-offset-4 hover:underline">
+                Start a conversation <Arrow className="size-4" />
+              </ContactLink>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} TemmsTech. All rights reserved.</p>
-          <a href="/models/ATTRIBUTION.md" className="hover:text-brand">
-            3D model credits
-          </a>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link href="/privacy" className="hover:text-brand">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-brand">
+              Terms of Use
+            </Link>
+            <a href="/models/ATTRIBUTION.md" className="hover:text-brand">
+              3D model credits
+            </a>
+          </nav>
           <a
             href="#top"
             className="inline-flex items-center gap-3 hover:text-brand"
           >
-            Back to top <span aria-hidden="true">↑</span>
+            Back to top <Arrow className="size-4 -rotate-90" />
           </a>
         </div>
       </div>

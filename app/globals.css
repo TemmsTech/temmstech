@@ -224,7 +224,7 @@
   }
 
   .image-card {
-    @apply relative h-full overflow-hidden;
+    @apply relative flex h-full flex-col overflow-hidden;
     border: 1px solid transparent;
     border-radius: var(--card-radius);
     background: linear-gradient(var(--card-panel), var(--card-panel)) padding-box, var(--card-edge) border-box;
@@ -240,8 +240,11 @@
     box-shadow: inset 0 1px 0 #ffffffcc, inset 1px 0 0 #ffffff66, inset -1px -1px 0 #557da633;
     pointer-events: none;
   }
+  /* The body fills the card and the description takes up the slack, so whatever
+     follows it (a rule and a list) starts at the same height in every card of
+     a row, whether the description runs one line or two. */
   .image-card-body {
-    @apply p-6 lg:p-8;
+    @apply flex flex-1 flex-col p-6 lg:p-8;
     border-top: 1px solid var(--card-rule);
     background: var(--card-body);
   }
@@ -250,7 +253,7 @@
     color: var(--card-accent);
   }
   .image-card-description {
-    @apply text-sm leading-7;
+    @apply flex-1 text-sm leading-7;
     color: var(--card-muted);
   }
   .project-preview {
@@ -476,7 +479,7 @@
 }
 
 .hero-primary {
-  box-shadow: var(--hero-action-shadow);
+  --btn-glow: var(--hero-action-shadow);
 }
 .hero-artwork {
   animation: artwork-enter 900ms ease-out both;
@@ -503,14 +506,88 @@
   }
 }
 
+/* The next section stays hidden until the hero's zoom finishes, so the hero
+   must fill the screen (below the 5rem navbar) or tall screens show a void. */
+.hero-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 5rem);
+}
+.hero-stage > .page-container:first-child {
+  flex: 1;
+  align-content: center;
+}
 .device-stage {
-  height: clamp(18rem, 27vw, 24rem);
+  /* Extra room added below the original frame; the camera is untouched. */
+  --stage-extra: 0rem;
+  /* Room added above and below the frame without moving the page layout
+     (negative margins cancel it out) or the model (the camera view shifts). */
+  --stage-top: 0rem;
+  --stage-bottom: 0rem;
+  --stage-grow: calc(var(--stage-extra) + var(--stage-top) + var(--stage-bottom));
+  box-sizing: border-box;
+  padding-top: var(--stage-top);
+  padding-bottom: calc(var(--stage-extra) + var(--stage-bottom));
+  margin-top: calc(var(--stage-top) * -1);
+  margin-bottom: calc(var(--stage-bottom) * -1);
+  height: calc(clamp(18rem, 27vw, 24rem) + var(--stage-grow));
   background: radial-gradient(ellipse at 50% 55%, #03b2fa0b, transparent 65%);
+}
+@media (min-width: 768px) and (orientation: portrait) {
+  .device-stage {
+    height: calc(clamp(22rem, 36svh, 40rem) + var(--stage-grow));
+  }
+}
+@media (min-width: 768px) {
+  .device-stage {
+    --stage-extra: 6rem;
+    --stage-top: 3.5rem;
+    --stage-bottom: 3rem;
+  }
 }
 @media (min-width: 1024px) {
   .device-showcase-wide {
     width: calc(100% + max(3rem, (100vw - 80rem) / 2));
   }
+}
+/* Same look as the "Turn it into a cube" button on the capabilities page:
+   icon, bold label, thin underline. Only a cue (it ignores the pointer, so
+   dragging the laptop still works), centred below the laptop. Absolute, so
+   the stage keeps its size. Phones fill the stage with the device, so they go
+   without. */
+.device-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.65rem;
+  transform: translateX(-50%);
+  display: inline-flex;
+  min-height: 2.75rem;
+  max-width: 92%;
+  width: max-content;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--foreground);
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  .device-hint {
+    display: none;
+  }
+}
+.device-stage [data-dragging] {
+  cursor: grabbing;
+}
+.device-stage canvas {
+  cursor: grab;
+}
+.device-stage [data-dragging] canvas {
+  cursor: grabbing;
 }
 .device-stage canvas {
   display: block;
@@ -543,14 +620,28 @@
 }
 .fallback-phone {
   position: absolute;
-  width: 24%;
+  height: 100%;
   aspect-ratio: 600 / 1295;
-  right: 1%;
+  left: 50%;
   top: 0;
   border: 6px solid var(--visual-panel);
   border-radius: 22px;
   overflow: hidden;
-  transform: rotate(7deg);
+  transform: translateX(-50%) rotate(7deg);
+}
+/* One device at a time: phone below 768px, laptop from 768px up. */
+@media (max-width: 767.98px) {
+  .fallback-laptop {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  .fallback-phone {
+    display: none;
+  }
+  .fallback-laptop {
+    left: 10%;
+  }
 }
 
 .screen-portal {
@@ -646,6 +737,7 @@
   }
 }
 
+
 .section-nav {
   position: sticky;
   top: 0;
@@ -659,8 +751,40 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   color: var(--card-accent);
   font-weight: 600;
 }
+.side-toc-link {
+  border-left: 2px solid transparent;
+  color: var(--muted-foreground);
+  transition:
+    color 150ms,
+    border-color 150ms;
+}
+.side-toc-link:hover {
+  color: var(--foreground);
+}
+.side-toc-link[aria-current="location"] {
+  border-left-color: var(--card-accent);
+  color: var(--card-accent);
+  font-weight: 600;
+}
+.side-toc {
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+}
+.side-toc ul {
+  border-left: 1px solid var(--border);
+}
+.side-toc .side-toc-link {
+  margin-left: -1px;
+}
 .section-nav ~ section[id] {
   scroll-margin-top: 5rem;
+}
+/* Land flush under the pinned section nav (4rem bar + 2px borders), so the
+   section fills the screen and nothing of the previous section shows. The
+   negative margin cancels the 6.5rem html scroll-padding. */
+.section-nav ~ section.fill-below-nav {
+  scroll-margin-top: calc(4.125rem - 6.5rem);
+  min-height: calc(100dvh - 4.125rem);
 }
 .hero-photo-shade {
   background: linear-gradient(
@@ -681,4 +805,1342 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 
 .image-tile-shade {
   background: linear-gradient(transparent, var(--ink));
+}
+
+/* Work page hero: three captures fan out of a stack, then respond to hover. */
+.work-fan {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+.work-fan-card {
+  --rest: rotate(-6deg);
+  --lift: rotate(0deg) translateY(-8px) scale(1.04);
+  --from: translate(58%, 20px) rotate(0deg) scale(0.94);
+  transform: var(--rest);
+}
+.work-fan-card:nth-child(2) {
+  --rest: scale(1.1);
+  --lift: translateY(-8px) scale(1.14);
+  --from: translateY(24px) scale(1.02);
+  z-index: 10;
+}
+.work-fan-card:nth-child(3) {
+  --rest: rotate(6deg);
+  --from: translate(-58%, 20px) rotate(0deg) scale(0.94);
+}
+@keyframes work-fan-in {
+  from {
+    opacity: 0;
+    transform: var(--from);
+  }
+  to {
+    opacity: 1;
+    transform: var(--rest);
+  }
+}
+@keyframes work-fan-shake {
+  0%,
+  22%,
+  100% {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+  4% {
+    rotate: -1.4deg;
+    translate: -3px 0;
+  }
+  8% {
+    rotate: 1.4deg;
+    translate: 3px -1px;
+  }
+  12% {
+    rotate: -1deg;
+    translate: -2px 0;
+  }
+  16% {
+    rotate: 0.8deg;
+    translate: 2px 0;
+  }
+  19% {
+    rotate: -0.3deg;
+    translate: -1px 0;
+  }
+}
+@keyframes work-fan-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* "backwards" so the finished state returns to the plain transform and hover can take over */
+  /* The loop uses the separate rotate/translate properties so it composes with the
+     entrance and hover, which both own transform. */
+  .work-fan-card {
+    animation:
+      work-fan-in 700ms var(--ease-out-strong) backwards,
+      work-fan-shake 5s var(--ease-in-out-strong) infinite;
+    animation-delay:
+      calc(var(--i) * 70ms + 120ms),
+      calc(1500ms + var(--i) * 900ms);
+    transition:
+      transform 250ms var(--ease-out-strong),
+      box-shadow 250ms var(--ease-out-strong);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-fan-card {
+    animation: work-fan-fade 300ms ease backwards;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .work-fan-card:hover {
+    transform: var(--lift);
+    box-shadow: var(--card-shadow-raised);
+    z-index: 20;
+    animation-play-state: running, paused;
+  }
+}
+
+/* Contact hero wall of work: every tile starts as a small dot, then the dots open
+   into the full grid one after another. Plain CSS, so it plays on first paint. */
+@keyframes wall-tile-open {
+  from {
+    clip-path: inset(calc(50% - 5px) round 999px);
+    scale: 0.5;
+  }
+  to {
+    clip-path: inset(0 round 0);
+    scale: 1;
+  }
+}
+@keyframes wall-tile-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-wall-tile {
+    animation: wall-tile-open 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation-delay: calc(350ms + var(--i) * 45ms);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-wall-tile {
+    animation: wall-tile-fade 300ms ease backwards;
+  }
+}
+
+/* Loading state for a live site frame: a soft sheen sweeps across while the
+   site opens, then the placeholder fades away as the site fades in. */
+@keyframes live-frame-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.live-frame-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity 400ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 400ms;
+}
+.live-frame-loading[data-loaded] {
+  opacity: 0;
+  visibility: hidden;
+}
+/* A simulated reload covers the already-loaded site with an opaque placeholder. */
+.live-frame-loading[data-reload] {
+  background: var(--ink);
+}
+.live-frame-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.1) 50%,
+    transparent 70%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-frame-sheen {
+    animation: live-frame-sheen 1400ms linear infinite;
+  }
+}
+
+/* Contact hero: the three tiles drift up and down out of step, with a slow push-in on each photo. */
+@keyframes contact-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10px);
+  }
+}
+@keyframes contact-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .contact-float > figure {
+    animation: contact-float 4.5s cubic-bezier(0.77, 0, 0.175, 1) infinite
+      alternate;
+  }
+  .contact-float > figure:nth-child(2) {
+    animation-delay: -1.5s;
+  }
+  .contact-float > figure:nth-child(3) {
+    animation-delay: -3s;
+  }
+  .contact-float > figure img {
+    animation: contact-drift 9s cubic-bezier(0.77, 0, 0.175, 1) infinite
+      alternate;
+  }
+}
+
+/* Process spine: a vertical line of steps that light up in order as it fills. */
+.spine {
+  --spine-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --spine-gap: 3rem;
+  display: grid;
+  gap: var(--spine-gap);
+  list-style: none;
+  padding: 0;
+}
+.spine-step {
+  position: relative;
+  padding-left: 2.25rem;
+}
+.spine-dot {
+  position: absolute;
+  top: 0.35rem;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--foreground) 30%, transparent);
+  border-radius: 50%;
+  background: var(--ink);
+  transition:
+    background-color 300ms var(--spine-ease),
+    border-color 300ms var(--spine-ease);
+}
+.spine-dot::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(var(--brand), transparent 70%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 400ms var(--spine-ease),
+    transform 400ms var(--spine-ease);
+}
+.spine-step[data-lit] .spine-dot {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.spine-step[data-lit] .spine-dot::after {
+  opacity: 0.55;
+  transform: scale(1);
+}
+.spine-step > :not(.spine-seg, .spine-dot) {
+  opacity: 0.4;
+  transition: opacity 400ms var(--spine-ease);
+}
+.spine-step[data-lit] > :not(.spine-seg, .spine-dot) {
+  opacity: 1;
+}
+.spine-seg {
+  position: absolute;
+  top: calc(0.35rem + 12px);
+  bottom: calc(0.35rem - var(--spine-gap));
+  left: 5px;
+  width: 2px;
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.spine-seg-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--brand), var(--visual-highlight));
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 500ms var(--spine-ease);
+}
+.spine-step[data-next-lit] .spine-seg-fill {
+  transform: scaleY(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .spine-dot,
+  .spine-dot::after,
+  .spine-seg-fill,
+  .spine-step > :not(.spine-seg, .spine-dot) {
+    transition-duration: 1ms;
+  }
+}
+
+/* Form panel: a deep navy card. It is opaque, with no blur or saturation, so
+   it never glows against the bright brand-blue section. The card tokens are
+   re-pointed to light-on-dark values so everything inside it (labels, fields,
+   muted text, focus ring) follows without per-element overrides. */
+.glass-panel {
+  --card-ink: #f5f5f5;
+  --card-muted: #aab9cb;
+  --card-accent: var(--brand);
+  position: relative;
+  border-radius: 1.75rem;
+  border: 1px solid transparent;
+  /* Layers, top to bottom: a soft light pooled at the top-left, the navy body
+     fading darker toward the bottom, then a hairline edge that catches light on
+     the upper-left and fades out (the border-box layer). */
+  background:
+    radial-gradient(
+        120% 70% at 12% 0%,
+        rgb(255 255 255 / 0.11),
+        transparent 60%
+      )
+      padding-box,
+    linear-gradient(165deg, #1b3150 0%, #11213a 50%, #0a1424 100%) padding-box,
+    linear-gradient(
+        150deg,
+        rgb(255 255 255 / 0.38),
+        rgb(255 255 255 / 0.06) 35%,
+        rgb(255 255 255 / 0.04) 65%,
+        rgb(255 255 255 / 0.18)
+      )
+      border-box;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 1px 1px #0000001f,
+    0 3px 6px #07111f26,
+    0 12px 24px #07111f33,
+    0 28px 56px #07111f40,
+    0 56px 110px #07111f4d;
+  color: var(--card-ink);
+}
+.glass-muted {
+  color: var(--card-muted);
+}
+.glass-field {
+  display: block;
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 0.875rem;
+  background: rgb(0 0 0 / 0.26);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+  color: var(--card-ink);
+  box-shadow:
+    inset 0 2px 4px #00000066,
+    0 1px 0 rgb(255 255 255 / 0.07);
+  transition:
+    border-color 150ms,
+    background-color 150ms,
+    box-shadow 150ms;
+}
+.glass-field::placeholder {
+  color: var(--card-muted);
+}
+.glass-field:focus {
+  border-color: var(--card-accent);
+  background: rgb(0 0 0 / 0.34);
+  box-shadow:
+    inset 0 2px 4px #00000066,
+    0 0 0 4px color-mix(in srgb, var(--card-accent) 25%, transparent);
+}
+.glass-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+}
+.glass-chip:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.glass-lift {
+  transition:
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .glass-lift:hover,
+  .glass-lift:focus-within {
+    transform: translateY(-6px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 2px 2px #0000001f,
+      0 6px 12px #07111f2e,
+      0 20px 40px #07111f40,
+      0 44px 80px #07111f4d,
+      0 80px 140px #07111f59;
+  }
+}
+/* Close button: the red look and press-in come from the shared .btn styles.
+   This only places it in the panel's top-right corner. It is written as
+   `.glass-panel > .glass-close` so it outranks `.btn`, which is also
+   `position: relative` (for its hover pulse) and would otherwise win. */
+.glass-panel > .glass-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border-radius: 9999px;
+}
+
+/* Contact reveal: the form slides in from the right when the section opens. */
+@keyframes brief-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes brief-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brief-panel:not([hidden]) {
+    animation: brief-in 420ms cubic-bezier(0.23, 1, 0.32, 1) 120ms backwards;
+  }
+  .brief-points {
+    animation: brief-fade 420ms ease 240ms backwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brief-panel:not([hidden]) {
+    animation: brief-fade 200ms ease backwards;
+  }
+}
+
+/* Physical buttons. Light falls from above: a bright top edge, a darker
+   underside, a hairline rim and a soft drop shadow. Pressing pushes the button
+   in: it moves down, darkens, and the shadow turns inward. */
+@layer components {
+  .btn {
+    --btn-light: 18%;
+    --btn-dark: 16%;
+    --btn-glow: 0 0 #0000;
+    --btn-sheen: 0.16;
+    --btn-hl: 0.42;
+    --btn-drop: 0 0 #0000;
+    --btn-edge: color-mix(in srgb, var(--btn-base) 50%, black);
+    color: var(--btn-fg);
+    background:
+      linear-gradient(
+        180deg,
+        rgb(255 255 255 / var(--btn-sheen)) 0%,
+        rgb(255 255 255 / 0) 52%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--btn-base), white var(--btn-light)) 0%,
+        var(--btn-base) 48%,
+        color-mix(in srgb, var(--btn-base), black var(--btn-dark)) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / var(--btn-hl)),
+      inset 0 -1px 0 rgb(0 0 0 / 0.22),
+      0 0 0 1px var(--btn-edge),
+      0 1px 1px rgb(0 0 0 / 0.14),
+      0 4px 10px -2px rgb(0 0 0 / 0.28),
+      var(--btn-drop),
+      var(--btn-glow);
+    transition:
+      transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      filter 160ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .btn:where(:not(:disabled)) {
+    cursor: pointer;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:where(:not(:disabled)):hover {
+      filter: brightness(1.07);
+    }
+  }
+  .btn:where(:not(:disabled)):active {
+    transform: translateY(1px) scale(0.985);
+    filter: brightness(0.94);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--btn-base), black 18%) 0%,
+      color-mix(in srgb, var(--btn-base), black 5%) 100%
+    );
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.42),
+      inset 0 0 0 1px rgb(0 0 0 / 0.08),
+      inset 0 -1px 0 rgb(255 255 255 / 0.14),
+      0 0 0 1px var(--btn-edge),
+      0 1px 0 rgb(255 255 255 / 0.2),
+      var(--btn-glow);
+    transition-duration: 70ms;
+  }
+  .btn:disabled {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 0 0 1px var(--btn-edge);
+  }
+  /* Black buttons take no light on top: a flat face that sits on its shadow. */
+  .btn-default,
+  .btn-ink {
+    --btn-light: 0%;
+    --btn-sheen: 0;
+    --btn-hl: 0;
+    --btn-edge: rgb(0 0 0 / 0.55);
+    --btn-drop: 0 8px 18px -6px rgb(0 0 0 / 0.45);
+  }
+  .btn-default {
+    --btn-base: var(--primary);
+    --btn-fg: var(--primary-foreground);
+  }
+  .btn-ink {
+    --btn-base: var(--ink);
+    --btn-fg: var(--brand);
+  }
+  /* On dark sections the default button is bright cyan, which does catch light. */
+  .dark-surface .btn-default {
+    --btn-light: 18%;
+    --btn-sheen: 0.16;
+    --btn-hl: 0.42;
+    --btn-edge: color-mix(in srgb, var(--btn-base) 50%, black);
+    --btn-drop: 0 0 #0000;
+  }
+  .btn-destructive {
+    --btn-base: var(--destructive);
+    --btn-fg: var(--destructive-foreground);
+  }
+  .btn-secondary {
+    --btn-base: var(--secondary);
+    --btn-fg: var(--secondary-foreground);
+    --btn-light: 55%;
+    --btn-dark: 7%;
+    --btn-edge: color-mix(in srgb, var(--foreground) 18%, transparent);
+  }
+  .btn-outline {
+    --btn-base: var(--background);
+    --btn-fg: var(--foreground);
+    --btn-light: 70%;
+    --btn-dark: 6%;
+    --btn-edge: color-mix(in srgb, var(--foreground) 22%, transparent);
+  }
+  .dark-surface .btn-outline,
+  .dark-surface .btn-secondary {
+    --btn-light: 12%;
+    --btn-dark: 35%;
+  }
+  /* Form tags are small buttons: raised at rest, pressed in on click, and a
+     chosen tag stays pressed in, dark, like a key held down. */
+  .glass-chip:has(:checked) {
+    --btn-base: var(--ink);
+    --btn-fg: var(--brand);
+    --btn-edge: rgb(0 0 0 / 0.55);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ink), black 28%) 0%,
+      var(--ink) 100%
+    );
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.55),
+      inset 0 0 0 1px rgb(0 0 0 / 0.1),
+      0 0 0 1px var(--btn-edge),
+      0 1px 0 rgb(255 255 255 / 0.7);
+    transform: translateY(1px);
+  }
+  /* On the dark panel a pressed tag is brand-tinted, since ink on navy would vanish. */
+  .glass-panel .glass-chip:has(:checked) {
+    --btn-fg: var(--brand);
+    background: color-mix(in srgb, var(--brand) 16%, #0b1626);
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.5),
+      0 0 0 1px var(--brand);
+  }
+  .glass-close:active {
+    transform: translateY(1px) scale(0.97);
+  }
+}
+
+/* Button hover behaviour. Every button answers the pointer:
+   - solid buttons send out a soft pulse ring and nudge their arrow,
+   - destructive, icon and close buttons shake instead,
+   - ghost buttons and form tags lift slightly.
+   The pulse lives on ::after and the shake uses the individual `translate`
+   property, so neither fights the press-in (`transform`) or the button's own
+   box-shadow. Gated to fine-pointer hover and no reduced-motion preference. */
+@keyframes arrow-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+@keyframes btn-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14, 1.4);
+  }
+}
+@keyframes btn-shake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  18% {
+    translate: -3px 0;
+  }
+  36% {
+    translate: 3px 0;
+  }
+  54% {
+    translate: -2px 0;
+  }
+  72% {
+    translate: 2px 0;
+  }
+  88% {
+    translate: -1px 0;
+  }
+}
+@keyframes btn-wiggle {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: -6deg;
+  }
+  50% {
+    rotate: 5deg;
+  }
+  75% {
+    rotate: -3deg;
+  }
+}
+
+.btn {
+  position: relative;
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--btn-pulse, var(--brand));
+  opacity: 0;
+  pointer-events: none;
+}
+.btn-secondary,
+.btn-outline {
+  --btn-pulse: color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+.btn-destructive {
+  --btn-pulse: var(--destructive);
+}
+.btn-default,
+.btn-ink {
+  --btn-pulse: var(--brand);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  /* Arrows keep nudging forward and back for as long as their button, link or
+     summary is hovered. Uses `transform`, which applies after an arrow's own
+     `rotate`, so rotated arrows (down, up) move the way they point. */
+  :is(a, button, summary):where(:not(:disabled)):hover [data-arrow] {
+    animation: arrow-nudge 800ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  }
+  .btn:where(:not(:disabled)):hover::after {
+    animation: btn-pulse 900ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
+  }
+  .btn-destructive:where(:not(:disabled)):hover::after {
+    animation: none;
+  }
+  .btn-destructive:where(:not(:disabled)):hover,
+  .glass-close:hover {
+    animation: btn-shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  /* Icon-only buttons (menu toggle) have no label to pulse around: wiggle the glyph. */
+  .btn:where(:not(:disabled)):hover > svg:only-child:not([data-arrow]) {
+    animation: btn-wiggle 500ms ease-in-out;
+  }
+  .btn:where(:not(:disabled)):hover:has(> svg:only-child:not([data-arrow]))::after {
+    animation: none;
+  }
+  .glass-chip:hover {
+    translate: 0 -2px;
+  }
+  .glass-chip.btn {
+    transition:
+      transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      translate 180ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      filter 160ms ease-out;
+  }
+}
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Browser window pinned to the hero laptop's screen (lib/screen-browser.ts).
+   Laid out at 1280x740 and mapped onto the model display with matrix3d. */
+.screen-browser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+  color: var(--foreground);
+  background: var(--ink);
+  will-change: transform;
+}
+.screen-browser[hidden] {
+  display: none;
+}
+.screen-browser[data-instant] * {
+  transition: none !important;
+}
+.screen-browser-tabs {
+  --window-controls: 156px;
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 56px;
+  padding: 10px var(--window-controls) 0 14px;
+  background: var(--ink);
+}
+/* Minimise / maximise / close, flush with the top right corner. */
+.screen-browser-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  pointer-events: none;
+}
+.screen-browser-control {
+  display: grid;
+  width: 52px;
+  height: 100%;
+  place-items: center;
+  color: var(--foreground);
+}
+.screen-browser-pill {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 14px;
+  border-radius: 12px 12px 0 0;
+  background: var(--card);
+  transition: transform 300ms var(--ease-out);
+}
+.screen-browser-tabs,
+.screen-browser-shield {
+  pointer-events: auto;
+}
+.screen-browser-tab {
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  transition: color 200ms var(--ease-out);
+}
+.screen-browser-tab[data-active="true"] {
+  color: var(--foreground);
+}
+.screen-browser-tab-icon {
+  display: grid;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--brand);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.screen-browser-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-browser-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 60px;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  background: var(--card);
+}
+.screen-browser-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.screen-browser-nav-btn {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.screen-browser-nav-btn:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--foreground);
+}
+.screen-browser-nav-btn:active {
+  background: rgb(255 255 255 / 0.14);
+}
+.screen-browser-address {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 19px;
+  background: var(--ink);
+  font-size: 20px;
+  white-space: nowrap;
+}
+.screen-browser-scheme {
+  color: var(--muted-foreground);
+}
+.screen-browser-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-browser-load {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-browser-load[data-run] {
+  animation: screen-browser-load 900ms var(--ease-out) both;
+}
+@keyframes screen-browser-load {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  75% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+.screen-browser-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ink);
+}
+.screen-browser-page .live-frame-loading {
+  pointer-events: none;
+}
+.screen-browser[data-engaged] .screen-browser-stage {
+  pointer-events: auto;
+}
+.screen-browser-shield {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+.screen-browser[data-engaged] .screen-browser-shield {
+  pointer-events: none;
+}
+.screen-browser-shield::after {
+  content: "Click to interact";
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 20px;
+  white-space: nowrap;
+  color: #fff;
+  background: rgb(7 17 31 / 0.82);
+  border: 2px solid rgb(255 255 255 / 0.18);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.screen-browser-shield:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.screen-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  margin: -3px 0 0 -5px;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.45));
+  transition:
+    transform 1100ms cubic-bezier(0.45, 0.05, 0.2, 1),
+    opacity 250ms var(--ease-out);
+}
+.screen-cursor[data-show="true"] {
+  opacity: 1;
+}
+.screen-cursor svg {
+  transition: transform 120ms var(--ease-out);
+  transform-origin: 15% 10%;
+}
+.screen-cursor[data-press="true"] svg {
+  transform: scale(0.8);
+}
+.screen-cursor-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border: 3px solid var(--brand);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+}
+.screen-cursor-ripple[data-run] {
+  animation: screen-cursor-ripple 520ms var(--ease-out) both;
+}
+@keyframes screen-cursor-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+.screen-browser-page {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateX(40px);
+  transition:
+    opacity 300ms var(--ease-out),
+    transform 300ms var(--ease-out);
+}
+.screen-browser-page[data-state="active"] {
+  z-index: 2;
+  opacity: 1;
+  transform: none;
+}
+.screen-browser-page[data-state="leaving"] {
+  z-index: 1;
+  opacity: 0;
+  transform: translateX(-40px);
+}
+.screen-browser-page iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.screen-browser-page iframe[data-loaded] {
+  opacity: 1;
+}
+
+/* Miniature video player: opens over the screen, plays once, then minimises
+   to a chip in the same corner. Laid out in the device's own pixels. */
+.screen-player-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.screen-player-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(7 17 31 / 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms var(--ease-out);
+}
+.screen-player-layer[data-state="open"] .screen-player-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* One window, three poses: big and centred (open), small in the corner (mini),
+   and shrunk away into the chip (docked). */
+.screen-player {
+  --mini-w: 380px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0;
+  color: #fff;
+  background: var(--ink);
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transform-origin: 100% 100%;
+  transform: translate(-50%, -50%) scale(0.98);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    left 520ms var(--ease-out),
+    top 520ms var(--ease-out),
+    width 520ms var(--ease-out),
+    height 520ms var(--ease-out),
+    border-radius 520ms var(--ease-out),
+    box-shadow 520ms var(--ease-out),
+    outline-color 520ms var(--ease-out),
+    opacity 360ms var(--ease-out),
+    transform 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="open"] .screen-player {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+/* Small pose: bar 42px + video 16:9 + controls 56px. */
+.screen-player-layer[data-state="mini"] .screen-player,
+.screen-player-layer[data-state="docked"] .screen-player {
+  left: calc(100% - 28px);
+  top: calc(100% - 28px);
+  width: var(--mini-w);
+  height: calc(var(--mini-w) * 9 / 16 + 98px);
+  border-radius: 18px;
+  outline-color: rgb(255 255 255 / 0.14);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+  transform: translate(-100%, -100%);
+  opacity: 1;
+  pointer-events: auto;
+}
+.screen-player-layer[data-state="docked"] .screen-player {
+  opacity: 0;
+  transform: translate(-100%, -100%) scale(0.2);
+  pointer-events: none;
+}
+/* Same height and corner controls as the browser's tab strip when full screen. */
+.screen-player-bar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  padding: 0 0 0 20px;
+  background: var(--ink);
+  transition:
+    height 520ms var(--ease-out),
+    padding 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="mini"] .screen-player-bar,
+.screen-player-layer[data-state="docked"] .screen-player-bar {
+  height: 42px;
+  padding-left: 14px;
+}
+.screen-player-title {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: font-size 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="mini"] .screen-player-title,
+.screen-player-layer[data-state="docked"] .screen-player-title {
+  font-size: 17px;
+}
+.screen-player-wincontrols {
+  display: flex;
+  flex: none;
+}
+.screen-player .screen-player-win {
+  width: 52px;
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  color: var(--foreground);
+  transition:
+    background-color 150ms ease,
+    width 520ms var(--ease-out);
+}
+.screen-player .screen-player-win svg {
+  width: 18px;
+  height: 18px;
+}
+.screen-player-layer[data-state="mini"] .screen-player .screen-player-win,
+.screen-player-layer[data-state="docked"] .screen-player .screen-player-win {
+  width: 40px;
+}
+.screen-player .screen-player-win:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.screen-player .screen-player-win[data-action="close"]:hover {
+  background: #e81123;
+}
+.screen-player .screen-player-win:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.screen-player .screen-player-win:disabled:hover {
+  background: transparent;
+}
+.screen-player-video {
+  display: block;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.screen-player-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+.screen-player button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 6px;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.screen-player button:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+.screen-player button:focus-visible,
+.screen-player-dock:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.screen-player .screen-player-play {
+  color: var(--ink);
+  background: var(--brand);
+}
+.screen-player .screen-player-play:hover {
+  background: color-mix(in srgb, var(--brand) 82%, #fff);
+}
+.screen-player-play .icon-pause,
+.screen-player-play[data-playing="true"] .icon-play {
+  display: none;
+}
+.screen-player-play[data-playing="true"] .icon-pause {
+  display: block;
+}
+.screen-player-mute[data-muted="true"] .icon-on,
+.screen-player-mute[data-muted="false"] .icon-off {
+  display: none;
+}
+.screen-player-play span,
+.screen-player-mute span,
+.screen-player-dock-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.screen-player-track {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  margin: 0 6px;
+  cursor: pointer;
+  touch-action: none;
+}
+.screen-player-rail {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.22);
+  pointer-events: none;
+}
+.screen-player-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-player-dock {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 20px 0 10px;
+  border: 2px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  color: #fff;
+  background: #0b1626;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.4);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px) scale(0.9);
+  transform-origin: 100% 100%;
+  pointer-events: none;
+  transition:
+    opacity 250ms var(--ease-out) 120ms,
+    transform 250ms var(--ease-out) 120ms;
+}
+.screen-player-layer[data-state="docked"] .screen-player-dock {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.screen-player-dock-icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--brand);
+}
+.screen-player-dock-label {
+  white-space: nowrap;
+}
+.screen-browser[data-kind="phone"] .screen-player {
+  --mini-w: 262px;
+}
+.screen-browser[data-kind="phone"]
+  .screen-player-layer:is([data-state="mini"], [data-state="docked"])
+  .screen-player {
+  left: calc(100% - 14px);
+  top: calc(100% - 18px);
+  border-radius: 14px;
+}
+.screen-browser[data-kind="phone"] .screen-player-dock {
+  right: 14px;
+  bottom: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-browser * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.screen-browser-loading-title {
+  position: relative;
+  font-size: 28px;
+  color: var(--muted-foreground);
+}
+.screen-browser[data-kind="phone"] {
+  border-radius: 18px;
+}
+.screen-browser-status {
+  flex: none;
+  height: 54px;
+  background: var(--card);
+}
+.screen-browser[data-kind="phone"] .screen-browser-bar {
+  height: 56px;
+  padding: 0 16px;
+}
+.screen-browser[data-kind="phone"] .screen-browser-address {
+  justify-content: center;
+  font-size: 19px;
 }

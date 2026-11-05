@@ -1,0 +1,534 @@
+/* The static File Explorer window on the Windows desktop (lib/screen-explorer.ts).
+   Same 1280px layout units as .screen-browser. Only transforms and opacity
+   animate. Dark Windows 11 colours; sizes are a Windows 11 screenshot at 1920px
+   scaled by two thirds. It is driven by the visitor's own mouse. */
+
+.screen-explorer {
+  position: absolute;
+  inset: 0 0 var(--desk-bottom, 48px) 0;
+  z-index: 2;
+  /* The root only holds the window; presses fall through to the desktop. */
+  pointer-events: none;
+}
+.ex-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #191919;
+  color: #e9e9e9;
+  font: 11px/1.3 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  pointer-events: auto;
+  transform-origin: 50% 50%;
+  transform: translate(0, 0) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+/* Windowed is snapped to the right half; the layout reflows like the real one. */
+.screen-explorer[data-window="windowed"] .ex-window {
+  left: 50%;
+  box-shadow: -1px 0 0 rgb(255 255 255 / 0.14);
+}
+.screen-explorer[data-window="windowed"] .ex-c-type,
+.screen-explorer[data-window="windowed"] .ex-search {
+  display: none;
+}
+.screen-explorer[data-window="windowed"] .ex-crumb[data-lead] {
+  display: none;
+}
+.screen-explorer:not([data-window="windowed"]) .ex-crumb-more {
+  display: none;
+}
+.screen-explorer:is([data-window="minimised"], [data-window="closed"]) .ex-window {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+/* Snapping between full and half: the window eases in from the side it came from. */
+.screen-explorer[data-snap="windowed"] .ex-window {
+  animation: ex-to-half 320ms var(--ease-out);
+}
+.screen-explorer[data-snap="full"] .ex-window {
+  animation: ex-to-full 320ms var(--ease-out);
+}
+@keyframes ex-to-half {
+  from {
+    translate: -16% 0;
+  }
+}
+@keyframes ex-to-full {
+  from {
+    scale: 0.9 1;
+    translate: 6% 0;
+  }
+}
+
+/* ---- Tabs and window buttons ---------------------------------------------- */
+.ex-tabs {
+  display: flex;
+  height: 28px;
+  flex: none;
+  align-items: flex-end;
+  gap: 2px;
+  padding-left: 6px;
+  background: #000b1f;
+}
+.ex-tab {
+  display: flex;
+  min-width: 0;
+  width: 200px;
+  height: 25px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 6px 6px 0 0;
+  color: #d8dbe0;
+}
+.ex-tab[data-active="true"] {
+  background: #1a202a;
+  color: #fff;
+  font-weight: 600;
+}
+.ex-tab-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ex-tab i {
+  color: #9aa0a8;
+  font-size: 13px;
+  font-style: normal;
+}
+.ex-tab-add {
+  display: grid;
+  width: 24px;
+  height: 25px;
+  color: #cfd3d8;
+  font-size: 15px;
+  place-items: center;
+}
+.ex-controls {
+  display: flex;
+  height: 100%;
+  margin-left: auto;
+}
+.ex-control {
+  display: grid;
+  width: 32px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cfcfcf;
+  font: inherit;
+  cursor: default;
+  place-items: center;
+}
+.ex-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.ex-control[data-control="close"]:hover {
+  background: #e81123;
+  color: #fff;
+}
+.ex-control svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- Navigation row ---------------------------------------------------------- */
+.ex-nav {
+  display: flex;
+  height: 41px;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: #1a202a;
+}
+.ex-navbtn {
+  display: grid;
+  width: 30px;
+  height: 28px;
+  color: #e9e9e9;
+  font-size: 14px;
+  place-items: center;
+}
+.ex-navbtn[data-off="true"] {
+  color: #5f6670;
+}
+.ex-address {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 28px;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: #272d38;
+}
+.ex-crumb[data-place]:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.ex-crumbs {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ex-crumbs i {
+  padding: 0 7px;
+  color: #aab0b8;
+  font-style: normal;
+}
+.ex-search {
+  display: flex;
+  width: 270px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: 8px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: #272d38;
+  color: #c4c9d0;
+  font-size: 12px;
+}
+
+/* ---- Toolbar --------------------------------------------------------------- */
+.ex-toolbar {
+  display: flex;
+  height: 38px;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid #2a2a2a;
+  color: #e4e6ea;
+}
+.ex-tool {
+  display: flex;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+}
+.ex-tool em {
+  font-style: normal;
+}
+.ex-tool[data-off="true"] {
+  color: #5c5f64;
+}
+.ex-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #3a3a3a;
+}
+.ex-details {
+  margin-left: auto;
+}
+
+/* ---- Body: navigation pane and content --------------------------------------- */
+.ex-body {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+.ex-pane {
+  position: relative;
+  width: 192px;
+  flex: none;
+  padding: 6px 4px;
+  overflow: hidden;
+  border-right: 1px solid #202020;
+}
+.ex-pane-item {
+  position: relative;
+  display: flex;
+  height: 27px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.ex-pane-item[data-place]:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+.ex-navbtn[data-nav]:not([data-off="true"]):hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.ex-pane-item[data-selected="true"] {
+  background: #333;
+}
+.ex-pane-icon {
+  display: grid;
+  width: 18px;
+  place-items: center;
+}
+.ex-pin {
+  margin-left: auto;
+  color: #9a9a9a;
+}
+.ex-pane-gap {
+  display: block;
+  height: 1px;
+  margin: 6px 4px;
+  background: #2c2c2c;
+}
+.ex-main {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+.ex-content {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transition: opacity 150ms var(--ease-out);
+}
+.ex-content[data-fade] {
+  opacity: 0;
+}
+
+/* Details view */
+.ex-list {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding-left: 6px;
+}
+.ex-head,
+.ex-row {
+  position: relative;
+  display: flex;
+  height: 25px;
+  flex: none;
+  align-items: center;
+}
+.ex-head {
+  color: #c9ccd1;
+}
+.ex-head > span {
+  height: 100%;
+  border-right: 1px solid #333;
+  line-height: 25px;
+}
+.ex-c-name {
+  display: flex;
+  width: 300px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+}
+.ex-check {
+  width: 11px;
+  height: 11px;
+  border: 1px solid #aaa;
+  border-radius: 2px;
+}
+.ex-c-date {
+  width: 120px;
+  flex: none;
+  padding-left: 8px;
+  white-space: nowrap;
+}
+.ex-c-type {
+  width: 100px;
+  flex: none;
+  overflow: hidden;
+  padding-left: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ex-c-size {
+  width: 50px;
+  flex: none;
+  padding-right: 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+.ex-clip {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.ex-rows {
+  position: relative;
+}
+.ex-row:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+.ex-row[data-selected="true"] {
+  background: #333;
+}
+.ex-row[data-selected="true"] .ex-c-name::before {
+  width: 11px;
+  height: 11px;
+  margin-left: -4px;
+  border-radius: 2px;
+  background: #4cc2ff;
+  content: "";
+}
+.ex-scrollbar {
+  position: absolute;
+  top: 25px;
+  right: 0;
+  bottom: 3px;
+  /* A wide track to grab; the thumb inside is the thin visible bar. */
+  width: 14px;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity 200ms var(--ease-out);
+}
+.ex-scrollbar[data-show="true"] {
+  opacity: 1;
+}
+.ex-scrollbar i {
+  display: block;
+  width: 5px;
+  margin-left: auto;
+  margin-right: 3px;
+  border-radius: 3px;
+  background: #6d6d6d;
+  transition: width 120ms var(--ease-out);
+}
+.ex-scrollbar:hover i,
+.ex-scrollbar[data-drag] i {
+  width: 8px;
+  margin-right: 2px;
+  background: #9a9a9a;
+}
+
+/* Icons view */
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 104px);
+  align-content: start;
+  gap: 2px 0;
+  padding: 8px 8px;
+}
+.ex-item {
+  position: relative;
+  display: flex;
+  height: 98px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  border-radius: 4px;
+  text-align: center;
+}
+.ex-big {
+  display: grid;
+  height: 62px;
+  place-items: center;
+}
+.ex-img {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: #07111f;
+  place-items: center;
+}
+.ex-img img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.ex-item .ex-label {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ex-item:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+.ex-item[data-selected="true"] {
+  background: #333;
+}
+.ex-item[data-selected="true"]::before {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: #4cc2ff;
+  content: "";
+}
+
+.ex-empty {
+  padding-top: 60px;
+  color: #9aa0a8;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ---- Status bar ----------------------------------------------------------- */
+.ex-status {
+  display: flex;
+  height: 22px;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  background: #1c1c1c;
+  color: #c9ccd1;
+  font-size: 11px;
+}
+.ex-sel:not(:empty) {
+  padding-left: 10px;
+  border-left: 1px solid #444;
+}
+.ex-views {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.ex-views i {
+  display: grid;
+  width: 20px;
+  height: 18px;
+  border-radius: 3px;
+  place-items: center;
+}
+.ex-views i[data-on="true"] {
+  background: #333;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-scrollbar i,
+  .ex-content {
+    transition: none;
+  }
+  .screen-explorer[data-snap] .ex-window {
+    animation: none;
+  }
+}

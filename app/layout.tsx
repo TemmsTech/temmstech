@@ -10,7 +10,6 @@ import "@/app/globals.css";
 export const metadata: Metadata = {
   title: "TemmsTech — Built by us. Used by millions.",
   description: site.description,
-  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

@@ -1,3 +1,5 @@
+import { Arrow } from "@/components/arrow";
+import { CapabilityCube } from "@/components/capability-cube";
 import { ImageTile } from "@/components/image-tile";
 import { ImageCard } from "@/components/image-card";
 import { SectionNav } from "@/components/section-nav";
@@ -8,7 +10,20 @@ import {
   pageSections,
 } from "@/data/pages";
 import { services } from "@/data/services";
+import { capabilityHeroSlides } from "@/data/hero-slides";
 import { PageNextStep } from "./PageNextStep";
+
+// One photo per side of the cube: front, back, right, left, top, bottom.
+const pick = (list: readonly string[], index: number) =>
+  list[index % list.length];
+const cubeFaces = [
+  { src: pick(capabilityHeroSlides.digital, 0), caption: "Digital experiences" },
+  { src: pick(capabilityHeroSlides.digital, 1), caption: "Digital experiences" },
+  { src: pick(capabilityHeroSlides.hardware, 0), caption: "Connected hardware" },
+  { src: pick(capabilityHeroSlides.hardware, 1), caption: "Connected hardware" },
+  { src: pick(capabilityHeroSlides.ai, 0), caption: "Applied intelligence" },
+  { src: pick(capabilityHeroSlides.ai, 1), caption: "Applied intelligence" },
+];
 
 export function CapabilitiesPage() {
   return (
@@ -30,21 +45,31 @@ export function CapabilitiesPage() {
               href="#disciplines"
               className="mt-8 inline-flex min-h-12 items-center border-b border-foreground font-semibold"
             >
-              Explore the possibilities ↗
+              Explore the possibilities <Arrow className="ml-2 size-4" />
             </a>
           </div>
-          <div className="hero-mosaic">
-            <ImageTile
-              image={services[0].image}
-              caption="Digital experiences"
-              priority
-            />
-            <ImageTile image={services[2].image} caption="Connected hardware" />
-            <ImageTile
-              image={services[3].image}
-              caption="Applied intelligence"
-            />
-          </div>
+          <CapabilityCube faces={cubeFaces}>
+            <div className="hero-mosaic">
+              <ImageTile
+                image={services[0].image}
+                images={capabilityHeroSlides.digital}
+                caption="Digital experiences"
+                priority
+              />
+              <ImageTile
+                image={services[2].image}
+                images={capabilityHeroSlides.hardware}
+                caption="Connected hardware"
+                slideDelay={1700}
+              />
+              <ImageTile
+                image={services[3].image}
+                images={capabilityHeroSlides.ai}
+                caption="Applied intelligence"
+                slideDelay={3400}
+              />
+            </div>
+          </CapabilityCube>
         </div>
       </section>
       <SectionNav items={pageSections.capabilities} />
@@ -64,7 +89,7 @@ export function CapabilitiesPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             {capabilityDetails.map((detail) => (
               <ImageCard key={detail.title} {...detail}>
-                <ul className="mt-6 space-y-3 border-t border-border pt-5">
+                <ul className="mt-6 list-disc space-y-3 border-t border-border pt-5 pl-5 marker:text-muted-foreground">
                   {detail.examples.map((example) => (
                     <li key={example} className="text-sm">
                       {example}

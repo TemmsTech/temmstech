@@ -1,19 +1,11 @@
-import Image from "next/image";
+import { LiveFrame } from "@/components/live-frame";
 import { Arrow } from "@/components/arrow";
 import type { ShowcaseProject } from "@/types/showcase";
 
 export function ProjectCard({ project }: { project: ShowcaseProject }) {
   return (
     <article className="image-card min-w-0">
-      <div className="relative aspect-[12/7] overflow-hidden bg-ink">
-        <Image
-          src={project.desktopImage}
-          alt={`${project.title} website preview`}
-          fill
-          sizes="(min-width: 1280px) 592px, (min-width: 768px) 50vw, 100vw"
-          className="object-cover object-top"
-        />
-      </div>
+      <LiveFrame url={project.url} title={project.title} />
       <div className="image-card-body">
         <p className="image-card-label">{project.category}</p>
         <h3 className="text-2xl font-semibold tracking-tight">

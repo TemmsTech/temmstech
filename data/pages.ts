@@ -1,6 +1,7 @@
 import type { PageIntroContent } from "@/types/page";
 import { services } from "@/data/services";
 import { processSteps } from "@/data/approach";
+import { capabilityHeroSlides } from "@/data/hero-slides";
 
 export const pageIntros = {
   capabilities: {
@@ -43,7 +44,8 @@ export const capabilityDetails = [
   {
     title: "Experiences people use",
     image: services[0].image,
-    description: "Interfaces that make the everyday feel effortless.",
+    description:
+      "Interfaces that make the everyday feel effortless, clear to use and quick to love.",
     examples: [
       "Websites and commerce",
       "Mobile and web applications",
@@ -53,7 +55,8 @@ export const capabilityDetails = [
   {
     title: "Systems behind the experience",
     image: services[4].image,
-    description: "Tools, data, and workflows that work together.",
+    description:
+      "Tools, data, and workflows that work together, so your team can move without friction.",
     examples: [
       "Custom business software",
       "Integrations and workflow automation",
@@ -144,20 +147,40 @@ export const collaborationNotes = [
   },
 ];
 
+// Each card keeps its original photo first, then three more that fit its theme.
+// Every photo is already used elsewhere on the site, so nothing new is fetched.
 export const briefPrompts = [
   {
     title: "The situation",
     image: processSteps[1].image,
-    description: "What needs to work better?",
+    images: [
+      processSteps[1].image,
+      services[5].image,
+      processSteps[5].image,
+      capabilityHeroSlides.digital[1],
+    ],
+    description: "What needs to work better, and where is it getting in the way today?",
   },
   {
     title: "The people",
     image: processSteps[0].image,
-    description: "Who are we making it better for?",
+    images: [
+      processSteps[0].image,
+      services[4].image,
+      processSteps[2].image,
+      processSteps[3].image,
+    ],
+    description: "Who will use it, who is affected, and who needs to be involved?",
   },
   {
     title: "The practical details",
     image: services[0].image,
+    images: [
+      services[0].image,
+      services[1].image,
+      capabilityHeroSlides.digital[2],
+      capabilityHeroSlides.digital[3],
+    ],
     description: "Useful links, timing, and a budget range if you have one.",
   },
 ];

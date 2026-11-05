@@ -10,28 +10,50 @@ import {
   portfolioIntro,
   processIntro,
   contactIntro,
+  contactPoints,
 } from "@/data/page";
 import { services } from "@/data/services";
 import { processSteps } from "@/data/approach";
-import { contact } from "@/data/site";
-import { showcaseProjects } from "@/data/device-showcase";
+import { showcaseProjects, showcaseVideo } from "@/data/device-showcase";
 export function Home() {
   return (
     <>
       <Hero
         content={heroContent}
         projects={showcaseProjects}
+        video={showcaseVideo}
         nextSectionId={servicesIntro.id}
       />
       <Services intro={servicesIntro} services={services} />
-      <TabletTransition fromId={servicesIntro.id} toId={portfolioIntro.id} />
+      {/* Laptops: tablet, then phone. Tablets: phone only. Phones: none. */}
+      <TabletTransition
+        fromId={servicesIntro.id}
+        toId={portfolioIntro.id}
+        device="tablet"
+        forKinds={["laptop"]}
+      />
+      <TabletTransition
+        fromId={servicesIntro.id}
+        toId={portfolioIntro.id}
+        device="phone"
+        forKinds={["tablet"]}
+      />
       <Portfolio
         intro={portfolioIntro}
         projects={showcaseProjects}
         batchSize={4}
       />
+      <TabletTransition
+        fromId={portfolioIntro.id}
+        toId={processIntro.id}
+        device="phone"
+        forKinds={["laptop"]}
+      />
       <Process intro={processIntro} steps={processSteps} />
-      <Cta intro={contactIntro} email={contact.email} />
+      <Cta
+        intro={contactIntro}
+        points={contactPoints}
+      />
     </>
   );
 }

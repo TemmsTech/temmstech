@@ -1,0 +1,71 @@
+/** Small line icons for the simulated WhatsApp window; they take their colour from the text. */
+const line = (body: string, size = 24) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const solid = (body: string, size = 24) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" aria-hidden="true">${body}</svg>`;
+
+const HANDSET =
+  "M6.2 4h3l1.6 4-2 1.4a11 11 0 005.8 5.8l1.4-2 4 1.6v3a2 2 0 01-2.1 2C10.7 19.4 4.6 13.3 4.2 6.1A2 2 0 016.2 4z";
+
+export const WA_ICONS = {
+  logo: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.6a9.4 9.4 0 00-8 14.3L2.8 21.4l4.6-1.2A9.4 9.4 0 1012 2.6z" fill="none" stroke="#25d366" stroke-width="2" stroke-linejoin="round"/><path d="${HANDSET}" transform="translate(2.4 2.2) scale(.8)" fill="#25d366"/></svg>`,
+  chats: line('<path d="M5 4.5h14a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5h-8L6 20v-3.5H5A1.5 1.5 0 013.5 15V6A1.5 1.5 0 015 4.5z"/><path d="M8 9h8M8 12.5h5"/>'),
+  chatsActive: solid('<path d="M5 3.5h14A2.5 2.5 0 0121.5 6v9a2.5 2.5 0 01-2.5 2.5h-7.4L6.5 21.5v-4H5A2.5 2.5 0 012.5 15V6A2.5 2.5 0 015 3.5z"/><path d="M7.5 9h9M7.5 12.5h5.5" stroke="#1d1f1f" stroke-width="1.8" stroke-linecap="round"/>'),
+  phone: line(`<path d="${HANDSET}"/>`),
+  phoneActive: solid(`<path d="${HANDSET}"/>`),
+  status: line('<circle cx="12" cy="12" r="8.5" stroke-dasharray="3.2 2.2"/><circle cx="12" cy="12" r="4.3"/>'),
+  statusActive: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="3.2 2.2"/><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>`,
+  channels: line('<path d="M5 5h14a1.5 1.5 0 011.5 1.5v8.5a1.5 1.5 0 01-1.5 1.5h-8L6.5 20v-3.5H5A1.5 1.5 0 013.5 15V6.5A1.5 1.5 0 015 5z"/><circle cx="8.5" cy="10.8" r=".6" fill="currentColor"/><circle cx="12" cy="10.8" r=".6" fill="currentColor"/><circle cx="15.5" cy="10.8" r=".6" fill="currentColor"/>'),
+  channelsActive: solid('<path d="M5 5h14a1.5 1.5 0 011.5 1.5v8.5a1.5 1.5 0 01-1.5 1.5h-8L6.5 20v-3.5H5A1.5 1.5 0 013.5 15V6.5A1.5 1.5 0 015 5z"/><circle cx="8.5" cy="10.8" r="1" fill="#2e2f2f"/><circle cx="12" cy="10.8" r="1" fill="#2e2f2f"/><circle cx="15.5" cy="10.8" r="1" fill="#2e2f2f"/>'),
+  grid: line('<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>', 20),
+  verified: `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#1d9bf0"/><path d="m7.5 12.3 3 3 6-6.3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  communities: solid('<circle cx="12" cy="8" r="2.8"/><circle cx="5.6" cy="9.6" r="2.2"/><circle cx="18.4" cy="9.6" r="2.2"/><path d="M7 19v-2.4C7 14.5 9.2 13 12 13s5 1.5 5 3.6V19zM1.8 17.8v-1.5c0-1.4 1.5-2.5 3.7-2.5-1 .8-1.6 1.9-1.6 3.2v.8zM22.2 17.8v-1.5c0-1.4-1.5-2.5-3.7-2.5 1 .8 1.6 1.9 1.6 3.2v.8z"/>'),
+  metaAi: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="5" r="2.6" fill="#7b61ff"/><circle cx="18.2" cy="8.6" r="2.6" fill="#b44cff"/><circle cx="18.2" cy="15.4" r="2.6" fill="#d94cd6"/><circle cx="12" cy="19" r="2.6" fill="#8a5cff"/><circle cx="5.8" cy="15.4" r="2.6" fill="#a855f7"/><circle cx="5.8" cy="8.6" r="2.6" fill="#6d5cff"/></svg>`,
+  media: line('<rect x="6" y="3.5" width="14" height="12" rx="2"/><path d="M4 7.5v10a2 2 0 002 2h10M8.5 12.5l2.5-2.5 3 3 2-2 2 2"/>'),
+  search: line('<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>', 20),
+  plus: line('<path d="M12 5v14M5 12h14"/>', 22),
+  dots: solid('<circle cx="12" cy="5.5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="18.5" r="1.9"/>', 20),
+  video: line('<rect x="3" y="6.5" width="12" height="11" rx="2.5"/><path d="m15 11 5.5-3v8L15 13z"/>', 24),
+  videoSolid: solid('<path d="M3 8.5A2.5 2.5 0 015.5 6h7A2.5 2.5 0 0115 8.5v7a2.5 2.5 0 01-2.5 2.5h-7A2.5 2.5 0 013 15.5zM16 11.2l4.5-2.7v7L16 12.8z"/>', 24),
+  videoPlus: solid('<path d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5z"/><path d="M12 8.5v7M8.5 12h7" stroke="#21c063" stroke-width="2" stroke-linecap="round"/>', 28),
+  mic: line('<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/>', 22),
+  micSolid: solid('<rect x="8.5" y="3" width="7" height="12" rx="3.5"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>', 22),
+  emoji: line('<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14a4.2 4.2 0 007 0"/><circle cx="9.3" cy="9.8" r=".6" fill="currentColor"/><circle cx="14.7" cy="9.8" r=".6" fill="currentColor"/>', 22),
+  send: solid('<path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/>', 22),
+  ticks: `<svg viewBox="0 0 18 12" width="16" height="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m1 6.5 3.2 3.3L10.5 2M7 8.6l1.2 1.2L14.5 2"/></svg>`,
+  lock: line('<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"/>', 16),
+  link: line('<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>', 26),
+  dialpad: solid('<circle cx="6" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="18" cy="5" r="1.7"/><circle cx="6" cy="11" r="1.7"/><circle cx="12" cy="11" r="1.7"/><circle cx="18" cy="11" r="1.7"/><circle cx="6" cy="17" r="1.7"/><circle cx="12" cy="17" r="1.7"/><circle cx="18" cy="17" r="1.7"/><circle cx="12" cy="22" r="1.7"/>', 26),
+  calendar: line('<rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4M8.5 14h.1M12 14h.1M15.5 14h.1M8.5 17h.1M12 17h.1"/>', 26),
+  camera: line('<path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-2h5.6L16 7h2.5A1.5 1.5 0 0120 8.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17.5z"/><circle cx="12" cy="12.8" r="3.2"/>', 24),
+  pencil: line('<path d="m4 20 1-4.5L16.5 4a2 2 0 012.8 0l.7.7a2 2 0 010 2.8L8.5 19z"/>', 24),
+  person: solid('<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c.4-3.6 3.5-5.7 7.5-5.7s7.1 2.1 7.5 5.7z"/>', 24),
+  megaphone: solid('<path d="M4 10a1.5 1.5 0 011.5-1.5H8l7-3.5v14l-7-3.5H5.5A1.5 1.5 0 014 14zM17.5 9.5a3.5 3.5 0 010 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M7 15.5l1 4h2.2l-.9-3.6z"/>', 22),
+  bellOff: line('<path d="M8.5 5.3A6 6 0 0118 10c0 4 1.5 5.5 2 6H7M4 16h1.5C6.2 14.8 7 12.5 7 10M10 19.5a2 2 0 004 0M4 4l16 16"/>', 15),
+  callOut: line('<path d="M5.2 4h2.7l1.4 3.4-1.7 1.2a9 9 0 004.8 4.8l1.2-1.7L17.3 13v2.7a1.7 1.7 0 01-1.8 1.7C9.3 16.9 4.2 11.8 3.6 5.7A1.7 1.7 0 015.2 4zM14 4h6v6M20 4l-5.5 5.5"/>', 16),
+  callIn: line('<path d="M5.2 4h2.7l1.4 3.4-1.7 1.2a9 9 0 004.8 4.8l1.2-1.7L17.3 13v2.7a1.7 1.7 0 01-1.8 1.7C9.3 16.9 4.2 11.8 3.6 5.7A1.7 1.7 0 015.2 4zM20 4l-5.5 5.5M14.5 4v5.5H20"/>', 16),
+  callMissed: line('<path d="M5.2 4h2.7l1.4 3.4-1.7 1.2a9 9 0 004.8 4.8l1.2-1.7L17.3 13v2.7a1.7 1.7 0 01-1.8 1.7C9.3 16.9 4.2 11.8 3.6 5.7A1.7 1.7 0 015.2 4zM20 4l-5 5M15 5v4.5h4.5"/>', 16),
+  videoSmall: solid('<path d="M3 8.5A2.5 2.5 0 015.5 6h7A2.5 2.5 0 0115 8.5v7a2.5 2.5 0 01-2.5 2.5h-7A2.5 2.5 0 013 15.5zM16 11.2l4.5-2.7v7L16 12.8z"/>', 16),
+  chevron: line('<path d="m7 10 5 5 5-5"/>', 14),
+  camOff: line('<rect x="3" y="6.5" width="12" height="11" rx="2.5"/><path d="m15 11 5.5-3v8L15 13zM3 3l18 18"/>', 20),
+  screen: line('<rect x="4" y="5.5" width="16" height="11" rx="2"/><path d="M12 15V9.5M9.7 11.6 12 9.4l2.3 2.2M8 20h8"/>', 20),
+  addPerson: solid('<circle cx="9.5" cy="8.5" r="3.6"/><path d="M2.5 20c.4-3.4 3.2-5.2 7-5.2s6.6 1.8 7 5.2zM19 8v6M16 11h6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>', 20),
+  chatBox: line('<rect x="4" y="5" width="16" height="13" rx="2.5"/><path d="M8 9.5h8M8 13h5"/>', 20),
+  close: line('<path d="M6 6l12 12M18 6 6 18"/>', 20),
+  external: line('<path d="M13 4h7v7M20 4l-9 9M18 14v4.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 014 18.5v-11A1.5 1.5 0 015.5 6H10"/>', 18),
+  copy: solid('<path d="M8 3.5h8.5A1.5 1.5 0 0118 5v11a1.5 1.5 0 01-1.5 1.5H8A1.5 1.5 0 016.5 16V5A1.5 1.5 0 018 3.5zM4 7.5v11A2.5 2.5 0 006.5 21H15v-1.5H6.5a1 1 0 01-1-1v-11z"/>', 16),
+  check: line('<path d="m5 12.5 4.5 4.5L19 7.5"/>', 16),
+  arrowLeft: line('<path d="M19 12H5M11 6l-6 6 6 6"/>', 22),
+  chevronRight: line('<path d="m10 6 6 6-6 6"/>', 20),
+  chevronLeft: line('<path d="m14 6-6 6 6 6"/>', 20),
+  pause: solid('<rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/>', 18),
+  play: solid('<path d="M7 4.8v14.4a1 1 0 001.5.9l12-7.2a1 1 0 000-1.8l-12-7.2A1 1 0 007 4.8z"/>', 18),
+  volume: line('<path d="M4 10v4h4l5 4V6l-5 4zM16.5 9a4 4 0 010 6M19 6.5a7.5 7.5 0 010 11"/>', 20),
+  volumeOff: line('<path d="M4 10v4h4l5 4V6l-5 4zM16.5 9.5l5 5M21.5 9.5l-5 5"/>', 20),
+  heart: line('<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.4 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z"/>', 22),
+  heartFilled: `<svg viewBox="0 0 24 24" width="22" height="22" fill="#f4425b" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.4 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z"/></svg>`,
+  sticker: line('<path d="M5 5.5A1.5 1.5 0 016.5 4h11A1.5 1.5 0 0119 5.5V13l-6 6H6.5A1.5 1.5 0 015 17.5z"/><path d="M19 13h-4.5A1.5 1.5 0 0013 14.5V19M9 9.5h.1M15 9.5h.1M9 13c1 1 3 1 4 0"/>', 22),
+  hangup: solid('<path d="M12 8.6c-3.6 0-6.9 1.1-8.7 2.8-.6.6-.6 1.5 0 2.1l1.2 1.2c.5.5 1.3.6 1.9.2l2.1-1.4a1.3 1.3 0 00.6-1.1v-1.2c1.2-.3 2.5-.3 3.8 0v1.2c0 .5.2.9.6 1.1l2.1 1.4c.6.4 1.4.3 1.9-.2l1.2-1.2c.6-.6.6-1.5 0-2.1C18.9 9.7 15.6 8.6 12 8.6z"/>', 26),
+} as const;
+
+export type WaIcon = keyof typeof WA_ICONS;

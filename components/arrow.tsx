@@ -9,6 +9,7 @@ export function Arrow({ className, ...props }: ComponentProps<"svg">) {
       strokeWidth="1.6"
       className={className ?? "size-5"}
       aria-hidden="true"
+      data-arrow=""
       {...props}
     >
       <path d="M5 12h14M12 5l7 7-7 7" />

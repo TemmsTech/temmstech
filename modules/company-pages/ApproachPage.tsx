@@ -1,7 +1,8 @@
-import Image from "next/image";
+import { Arrow } from "@/components/arrow";
 import { ImageCard } from "@/components/image-card";
+import { ProcessSpine } from "@/components/process-spine";
 import { SectionNav } from "@/components/section-nav";
-import { SectionReveal } from "@/components/section-reveal";
+import { Button } from "@/components/ui/button";
 import {
   deliveryStages,
   collaborationNotes,
@@ -15,44 +16,38 @@ export function ApproachPage() {
   return (
     <>
       <section
-        className="dark-surface relative isolate overflow-hidden bg-background"
+        id="journey"
+        className="dark-surface bg-background"
         aria-labelledby="page-title"
       >
-        <Image
-          src={processSteps[1].image}
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover"
-          priority
-        />
-        <div className="hero-photo-shade absolute inset-0" />
-        <div className="page-container relative py-20 lg:py-32">
-          <p className="eyebrow mb-6 text-brand">THINK. MAKE. LEARN. REPEAT.</p>
-          <h1 id="page-title" className="hero-title max-w-3xl">
-            {pageIntros.approach.title}
-          </h1>
-          <p className="mt-6 max-w-lg text-lg leading-8">
-            Clear decisions. Tangible progress. A shared way forward.
-          </p>
-          <div className="mt-12 flex flex-wrap gap-3">
-            {["Discover", "Prototype", "Build", "Release"].map(
-              (phase, index) => (
-                <span
-                  key={phase}
-                  className="border border-foreground/30 bg-background/70 px-4 py-3 text-sm"
-                >
-                  0{index + 1} / {phase}
-                </span>
-              ),
-            )}
+        <div className="page-container section-space grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-20">
+          <div className="lg:sticky lg:top-24 lg:flex lg:min-h-[calc(100dvh-17rem)] lg:flex-col lg:justify-center lg:self-start">
+            <p className="eyebrow mb-5 text-brand">
+              {pageIntros.approach.eyebrow}
+            </p>
+            <h1 id="page-title" className="section-title max-w-xl">
+              <span className="block">From the first idea,</span>{" "}
+              <span className="block text-brand">To launch &amp; beyond.</span>
+            </h1>
+            <p className="mt-6 max-w-md text-lg leading-8 text-muted-foreground">
+              {pageIntros.approach.description}
+            </p>
+            <div className="mt-8">
+              <Button asChild size="lg">
+                <a href="#delivery">
+                  See how we deliver
+                  <Arrow className="size-5 rotate-90" />
+                </a>
+              </Button>
+            </div>
           </div>
+          <ProcessSpine steps={processSteps} />
         </div>
       </section>
       <SectionNav items={pageSections.approach} />
       <section
         id="delivery"
-        className="bg-background"
+        className="fill-below-nav bg-background"
         aria-labelledby="delivery-title"
       >
         <div className="page-container section-space">
@@ -87,7 +82,6 @@ export function ApproachPage() {
           </ol>
         </div>
       </section>
-      <SectionReveal fromId="delivery" toId="collaboration" />
       <section
         id="collaboration"
         className="bg-secondary"
@@ -111,7 +105,6 @@ export function ApproachPage() {
           </div>
         </div>
       </section>
-      <SectionReveal fromId="collaboration" toId="contact" />
       <PageNextStep
         title="Start with a useful question."
         description="You bring the context. We’ll work through the next step together."
