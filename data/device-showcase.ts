@@ -1,4 +1,10 @@
-import type { ShowcaseProject } from "@/types/showcase";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
+
+/** Plays once in the miniature player on the hero screens, then minimises. */
+export const showcaseVideo: ShowcaseVideo = {
+  title: "TemmsTech intro",
+  src: "/videos/intro.mp4",
+};
 
 export const showcaseProjects = [
   {
@@ -6,7 +12,6 @@ export const showcaseProjects = [
     title: "MOG",
     category: "AI meeting assistant",
     url: "https://mog-nine.vercel.app/",
-    video: "/videos/intro.mp4",
   },
   {
     id: "donelclasico",

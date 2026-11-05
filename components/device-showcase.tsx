@@ -1,6 +1,6 @@
 "use client";
 import { LiveFrame } from "@/components/live-frame";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useDeviceKind,
   useDeviceMotion,
@@ -9,16 +9,28 @@ import {
 } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
-import { loadVideoDurations, showcaseDelay } from "@/lib/showcase-timing";
-import type { ShowcaseProject } from "@/types/showcase";
+import { SHOWCASE_INTERVAL_MS } from "@/lib/showcase-timing";
+import { onShowcasePlayer } from "@/lib/screen-video-player";
+import {
+  onShowcaseTab,
+  onShowcaseWindow,
+  watchPointerHover,
+} from "@/lib/showcase-events";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
+import "./screen-desktop.css";
+import "./screen-explorer.css";
+import "./screen-vscode.css";
 
 type DeviceShowcaseProps = {
   projects: readonly ShowcaseProject[];
+  /** Plays once in a miniature player on the screens, then minimises. */
+  video?: ShowcaseVideo;
   className?: string;
   nextSectionId: string;
 };
 export function DeviceShowcase({
   projects,
+  video,
   className,
   nextSectionId,
 }: DeviceShowcaseProps) {
@@ -29,22 +41,6 @@ export function DeviceShowcase({
   const kind = useDeviceKind();
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
-  );
-  // A tab with a video stays open until the video ends.
-  const [durationsLoaded, setDurationsLoaded] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    loadVideoDurations(projects).then(() => {
-      if (!cancelled) setDurationsLoaded((count) => count + 1);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [projects]);
-  const delayFor = useCallback(
-    (at: number) => showcaseDelay(projects[at]),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [projects, durationsLoaded],
   );
   // The tab timer waits while the device is being turned by hand.
   const [holding, setHolding] = useState(false);
@@ -67,12 +63,54 @@ export function DeviceShowcase({
       release();
     };
   }, []);
-  const [index] = useShowcasePlayback(
+  // The tabs hold still while the screen's video player is open.
+  const [playerOpen, setPlayerOpen] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcasePlayer(element, setPlayerOpen);
+  }, []);
+  // ...and while the browser window is minimised or closed to the desktop.
+  const [windowHidden, setWindowHidden] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcaseWindow(element, setWindowHidden);
+  }, []);
+  // ...and while a mouse is over the device, so a tab never changes under it.
+  const [hovering, setHovering] = useState(false);
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return watchPointerHover(element, setHovering);
+  }, []);
+  const autoplay =
+    !reducedMotion &&
+    status !== "loading" &&
+    !holding &&
+    !playerOpen &&
+    !windowHidden &&
+    !hovering;
+  const [index, setIndex] = useShowcasePlayback(
     section,
-    !reducedMotion && status !== "loading" && !holding,
+    autoplay,
     projects.length,
-    delayFor,
+    SHOWCASE_INTERVAL_MS,
   );
+  // Clicking a tab on the simulated screen opens that site.
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    return onShowcaseTab(element, (at) => {
+      if (at >= 0 && at < projects.length) setIndex(at);
+    });
+  }, [projects.length, setIndex]);
+  // The simulated pointer only plays while the tabs rotate on their own.
+  const autoplayRef = useRef(autoplay);
+  useEffect(() => {
+    autoplayRef.current = autoplay;
+    scene.current?.setAutoplay(autoplay);
+  }, [autoplay, status]);
   const project = projects[index] ?? projects[0];
   useEffect(() => {
     const element = host.current;
@@ -97,6 +135,7 @@ export function DeviceShowcase({
             controller.signal,
             () => setStatus("fallback"),
             nextSectionId,
+            video,
           );
       })
       .then((result) => {
@@ -107,6 +146,7 @@ export function DeviceShowcase({
           return;
         }
         scene.current = result;
+        result.setAutoplay(autoplayRef.current);
         setStatus("ready");
       })
       .catch(() => {
@@ -117,7 +157,7 @@ export function DeviceShowcase({
       created?.dispose();
       scene.current = null;
     };
-  }, [projects, nextSectionId, kind]);
+  }, [projects, nextSectionId, kind, video]);
   useEffect(() => {
     scene.current?.setProject(index, !reducedMotion);
   }, [index, reducedMotion, status]);
@@ -135,6 +175,22 @@ export function DeviceShowcase({
           ref={host}
           className={cn("absolute inset-0", status !== "ready" && "invisible")}
         />
+        {status === "ready" && (
+          <p className="device-hint" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            >
+              <path d="m5 3 14 7-6 2.2L10.8 19 5 3Zm8 9.2 5 5" />
+            </svg>
+            Zoom in &amp; interact
+          </p>
+        )}
         {status === "fallback" && (
           <div className="device-fallback" aria-hidden="true">
             <div className="fallback-laptop">

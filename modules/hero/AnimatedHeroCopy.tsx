@@ -20,7 +20,7 @@ export function AnimatedHeroCopy({ content }: { content: HeroContent }) {
     <div ref={container}>
       <h1
         id="hero-title"
-        className="hero-title hero-typewriter max-w-5xl"
+        className="hero-title hero-typewriter max-w-5xl overflow-x-clip"
         aria-label={`${content.headline} ${content.emphasis}`}
       >
         <span className="block" aria-hidden="true">{copy.headline}</span>

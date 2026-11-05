@@ -23,13 +23,17 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { drawSectionScreen } from "@/lib/section-screen";
 import { createScreenPortal } from "@/lib/screen-portal";
 import { createScreenBrowser, type ScreenBrowser } from "@/lib/screen-browser";
-import { showcaseDelay } from "@/lib/showcase-timing";
-import type { ShowcaseProject } from "@/types/showcase";
+import { onShowcasePlayer } from "@/lib/screen-video-player";
+import { watchPointerHover } from "@/lib/showcase-events";
+import { SHOWCASE_INTERVAL_MS } from "@/lib/showcase-timing";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 
 export type DeviceScene = {
   setProject: (index: number, animate: boolean) => void;
   finishTransition: () => void;
   setMotion: (enabled: boolean) => void;
+  /** Whether tabs are rotating by themselves; the simulated pointer only plays then. */
+  setAutoplay: (enabled: boolean) => void;
   setScroll: (progress: number) => void;
   dispose: () => void;
 };
@@ -71,6 +75,7 @@ export async function createDeviceScene(
   signal: AbortSignal,
   onContextLost: () => void,
   nextSectionId: string,
+  video?: ShowcaseVideo,
 ): Promise<DeviceScene> {
   const renderer = new WebGLRenderer({
     alpha: true,
@@ -105,6 +110,7 @@ export async function createDeviceScene(
   let observer: ResizeObserver | undefined;
   let finish: (() => void) | undefined;
   let teardownDrag: (() => void) | undefined;
+  let stopPlayerWatch: (() => void) | undefined;
   let portal: ReturnType<typeof createScreenPortal>;
   const browserViews: ScreenBrowser[] = [];
   let inView = false;
@@ -122,6 +128,7 @@ export async function createDeviceScene(
     cancelAnimationFrame(frame);
     observer?.disconnect();
     teardownDrag?.();
+    stopPlayerWatch?.();
     portal?.dispose();
     visibility?.disconnect();
     browserViews.forEach((view) => view.dispose());
@@ -279,10 +286,12 @@ export async function createDeviceScene(
     const laptopBrowser = createScreenBrowser(host, projects, {
       kind: "laptop",
       aspect: 0.294 / 0.17,
+      video,
     });
     const phoneBrowser = createScreenBrowser(host, projects, {
       kind: "phone",
       aspect: 6.52655 / 14.08495,
+      video,
     });
     browserViews.push(laptopBrowser, phoneBrowser);
     visibility = new IntersectionObserver(([entry]) => {
@@ -380,6 +389,9 @@ export async function createDeviceScene(
     let targetYaw = 0;
     let targetPitch = 0;
     let hold = 0; // 0 → 1 while dragging: fades the automatic sway out
+    // While the screen's video player is open the device holds still.
+    let swayPaused = false;
+    let pausedHold = 0; // 0 → 1 while the player is open
     let releasedAt = 0;
     let dragTime = 0;
     const dragActive = () =>
@@ -405,6 +417,8 @@ export async function createDeviceScene(
         dragYaw += (targetYaw - dragYaw) * follow;
         dragPitch += (targetPitch - dragPitch) * follow;
         hold += ((dragging ? 1 : 0) - hold) * (1 - Math.exp(-dt * 6));
+        pausedHold +=
+          ((swayPaused ? 1 : 0) - pausedHold) * (1 - Math.exp(-dt * 6));
         if (!dragActive()) {
           dragYaw = dragPitch = targetYaw = targetPitch = hold = 0;
         }
@@ -439,6 +453,7 @@ export async function createDeviceScene(
         }
       }
       const drift = 1 - scroll;
+      const still = Math.max(hold, pausedHold);
       const mobile = isMobile();
       laptopGroup.visible = !mobile;
       phoneGroup.visible = mobile;
@@ -446,17 +461,18 @@ export async function createDeviceScene(
       const activeGroup = mobile ? phoneGroup : laptopGroup;
       if (mobile) {
         activeGroup.rotation.y +=
-          Math.sin(clock * 0.65) * 0.16 * drift * (1 - hold) + dragYaw;
-        activeGroup.position.y += Math.sin(clock * 0.8 + 1) * 0.14 * drift;
+          Math.sin(clock * 0.65) * 0.16 * drift * (1 - still) + dragYaw;
+        activeGroup.position.y +=
+          Math.sin(clock * 0.8 + 1) * 0.14 * drift * (1 - pausedHold);
       } else {
         // Laptop: one deliberate turn per website, in step with the tab changes.
         // Wall-clock phase, like the tab timer, so a slow frame rate never
         // lets the turn drift out of step with the tab changes.
-        const phase = Math.min(1, (performance.now() - projectStart) / showcaseDelay(projects[projectIndex]));
+        const phase = Math.min(1, (performance.now() - projectStart) / SHOWCASE_INTERVAL_MS);
         const side = projectIndex % 2 === 0 ? 1 : -1;
         laptopGroup.rotation.set(
           LAPTOP_TILT + dragPitch,
-          side * LAPTOP_SWAY_YAW * (moving ? swing(phase) : 0) * drift * (1 - hold) +
+          side * LAPTOP_SWAY_YAW * (moving ? swing(phase) : 0) * drift * (1 - still) +
             dragYaw,
           0,
         );
@@ -486,11 +502,41 @@ export async function createDeviceScene(
         phoneBrowser.update(corners, mobile && open);
         syncLive();
       }
-      if (moving || transition || dragActive()) frame = requestAnimationFrame(draw);
+      if (
+        moving ||
+        transition ||
+        dragActive() ||
+        Math.abs((swayPaused ? 1 : 0) - pausedHold) > 0.001
+      )
+        frame = requestAnimationFrame(draw);
     }
     function schedule() {
       if (!frame && !disposed) frame = requestAnimationFrame(draw);
     }
+    // The tab timer restarts when the player closes, so restart the turn with it.
+    // The device holds still, facing front, while the video player is open or
+    // a mouse is over the stage.
+    let playerOpen = false;
+    let hovering = false;
+    const syncPause = () => {
+      const paused = playerOpen || hovering;
+      if (paused === swayPaused) return;
+      swayPaused = paused;
+      if (!paused) projectStart = performance.now();
+      schedule();
+    };
+    const stopPlayer = onShowcasePlayer(host, (open) => {
+      playerOpen = open;
+      syncPause();
+    });
+    const stopHover = watchPointerHover(host, (over) => {
+      hovering = over;
+      syncPause();
+    });
+    stopPlayerWatch = () => {
+      stopPlayer();
+      stopHover();
+    };
     function resize() {
       const width = host.clientWidth;
       const height = host.clientHeight;
@@ -618,6 +664,10 @@ export async function createDeviceScene(
             ],
           };
         schedule();
+      },
+      setAutoplay(enabled) {
+        laptopBrowser.setAuto(enabled);
+        phoneBrowser.setAuto(enabled);
       },
       setMotion(enabled) {
         moving = enabled;

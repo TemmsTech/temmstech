@@ -1,0 +1,491 @@
+/* The static VS Code window on the Windows desktop (lib/screen-vscode.ts).
+   Same 1280px layout units as .screen-browser. Only transforms and opacity
+   animate. Colours follow VS Code's GitHub Dark theme. */
+
+.screen-vscode {
+  position: absolute;
+  inset: 0 0 var(--desk-bottom, 48px) 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #121314;
+  color: #c9d1d9;
+  font: 13px/1.4 "Segoe UI", system-ui, sans-serif;
+  transform-origin: 50% 50%;
+  transform: translate(0, 0) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+/* .screen-browser lets presses through; only the window's own parts take them,
+   so the area around a windowed (smaller) window stays clickable. */
+.screen-vscode {
+  pointer-events: none;
+}
+.screen-vscode > * {
+  pointer-events: auto;
+}
+.screen-vscode[data-window="windowed"] {
+  transform: scale(0.78);
+  border-radius: 12px;
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(255 255 255 / 0.12);
+}
+.screen-vscode:is([data-window="minimised"], [data-window="closed"]) {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+
+/* ---- Title bar ------------------------------------------------------------ */
+.vs-titlebar {
+  position: relative;
+  display: flex;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding-left: 12px;
+  background: #191a1b;
+  font-size: 12.5px;
+}
+.vs-menu {
+  display: flex;
+}
+.vs-menu span {
+  padding: 0 8px;
+}
+.vs-nav {
+  position: absolute;
+  left: calc(34% - 56px);
+  display: flex;
+  gap: 16px;
+  color: #8c8c8c;
+}
+.vs-search {
+  position: absolute;
+  left: 34%;
+  width: 38%;
+  height: 24px;
+  border: 1px solid #2f3031;
+  border-radius: 6px;
+  background: #121314;
+  line-height: 22px;
+  text-align: center;
+}
+.vs-layout {
+  display: flex;
+  gap: 14px;
+  margin: 0 12px 0 auto;
+}
+.vs-layout i {
+  width: 14px;
+  height: 12px;
+  border: 1.5px solid #8c8c8c;
+  border-radius: 2px;
+}
+.vs-controls {
+  position: relative;
+  display: flex;
+  height: 100%;
+}
+.vs-control {
+  display: grid;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cfcfcf;
+  font: inherit;
+  cursor: default;
+  place-items: center;
+}
+.vs-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.vs-control[data-control="close"]:hover {
+  background: #e81123;
+  color: #fff;
+}
+.vs-control svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- Body ----------------------------------------------------------------- */
+.vs-main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+.vs-activity {
+  display: flex;
+  width: 48px;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  background: #191a1b;
+  color: #8c8c8c;
+}
+.vs-activity span {
+  position: relative;
+  display: grid;
+  width: 48px;
+  height: 40px;
+  place-items: center;
+}
+.vs-activity span[data-on="true"] {
+  color: #fff;
+}
+.vs-activity span[data-on="true"]::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: #2f81f7;
+  content: "";
+}
+
+.vs-sidebar {
+  display: flex;
+  width: 245px;
+  flex: none;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid #2a2b2c;
+  background: #191a1b;
+}
+.vs-side-head {
+  display: flex;
+  height: 35px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px 0 20px;
+  color: #bfbfbf;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.vs-tree {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.vs-row {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  gap: 6px;
+  padding-left: calc(8px + var(--depth) * 10px);
+  color: #bfbfbf;
+  white-space: nowrap;
+}
+.vs-strong {
+  color: #e6e6e6;
+  font-weight: 700;
+}
+.vs-link {
+  cursor: pointer;
+}
+.vs-link:hover {
+  background: #2a2d2e;
+  color: #fff;
+}
+.vs-selected {
+  background: #2c2d2e;
+  color: #fff;
+}
+.vs-chev {
+  width: 10px;
+  color: #8c8c8c;
+}
+.vs-file-icon {
+  display: grid;
+  width: 16px;
+  place-items: center;
+}
+.vs-glyph {
+  font-size: 13px;
+  line-height: 1;
+}
+.vs-side-foot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  border-top: 1px solid #2a2b2c;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.vs-side-foot span {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  padding: 0 10px;
+  color: #bfbfbf;
+}
+
+.vs-editor {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  background: #121314;
+}
+.vs-tabs {
+  display: flex;
+  height: 35px;
+  flex: none;
+  background: #202122;
+}
+.vs-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: #121314;
+  color: #fff;
+}
+.vs-tab em {
+  margin-left: 10px;
+  color: #8c8c8c;
+  font-style: normal;
+}
+.vs-crumbs {
+  display: flex;
+  height: 22px;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 20px;
+  overflow: hidden;
+  color: #9d9d9d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.vs-code {
+  min-height: 0;
+  flex: 1;
+  padding-top: 2px;
+  padding-bottom: 80px;
+  /* The visitor can scroll the code by hand; a thin dark bar, like the editor's. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #424242 transparent;
+  scroll-behavior: smooth;
+  color: #c9d1d9;
+  font: 12.5px/20px Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+.vs-line {
+  display: flex;
+  height: 20px;
+  white-space: pre;
+}
+.vs-line b {
+  width: 56px;
+  flex: none;
+  padding-right: 22px;
+  color: #6e7681;
+  font-weight: 400;
+  text-align: right;
+}
+.vs-line[data-current="true"] {
+  background: #242526;
+}
+.vs-line[data-current="true"] b {
+  color: #c9d1d9;
+}
+.vs-code .k {
+  color: #ff7b72;
+}
+.vs-code .s {
+  color: #a5d6ff;
+}
+.vs-code .c {
+  color: #8b949e;
+}
+.vs-code .f {
+  color: #d2a8ff;
+}
+.vs-code .v {
+  color: #79c0ff;
+}
+.vs-code .p {
+  color: #c9d1d9;
+}
+.vs-code .t {
+  color: #7ee787;
+}
+.vs-code .n,
+.vs-code .a {
+  color: #79c0ff;
+}
+.vs-caret {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  margin-bottom: -3px;
+  background: #c9d1d9;
+  animation: vs-blink 1s steps(1) infinite;
+}
+@keyframes vs-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vs-caret {
+    animation: none;
+  }
+}
+
+/* ---- Chat panel ----------------------------------------------------------- */
+.vs-chat {
+  display: flex;
+  width: 340px;
+  flex: none;
+  flex-direction: column;
+  border-left: 1px solid #2a2b2c;
+  background: #191a1b;
+}
+.vs-chat-tabs {
+  display: flex;
+  height: 35px;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+.vs-chat-tabs span {
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: #9d9d9d;
+}
+.vs-chat-tabs span[data-on="true"] {
+  background: #335d7d;
+  color: #fff;
+}
+.vs-chat-tabs i {
+  margin-left: auto;
+  color: #8c8c8c;
+  font-style: normal;
+}
+.vs-chat-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.vs-chat-input {
+  margin: 0 14px 8px;
+  padding: 8px 10px;
+  border: 1px solid #2f3031;
+  border-radius: 8px;
+}
+.vs-chat-field {
+  height: 52px;
+}
+.vs-chat-row {
+  display: flex;
+  gap: 14px;
+  color: #9d9d9d;
+  font-size: 12px;
+}
+.vs-chat-foot {
+  display: flex;
+  height: 30px;
+  flex: none;
+  align-items: center;
+  gap: 18px;
+  padding: 0 14px;
+  color: #9d9d9d;
+  font-size: 12px;
+}
+
+/* ---- Status bar ----------------------------------------------------------- */
+.vs-status {
+  display: flex;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-top: 1px solid #2a2b2c;
+  background: #191a1b;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+/* ---- The globals.css view (opened from File Explorer) ----------------------- */
+.vs-row.vs-open .vs-chev {
+  transform: rotate(90deg);
+}
+.vs-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 4px 0 1px;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  vertical-align: -1px;
+}
+.vs-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 14px;
+}
+.vs-sessions b {
+  color: #e6e6e6;
+  font-size: 12px;
+}
+.vs-session {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 14px;
+  color: #d4d4d4;
+}
+.vs-session em {
+  color: #8c8c8c;
+  font-size: 11px;
+  font-style: normal;
+}
+.vs-tip {
+  margin: auto 14px 10px;
+  padding: 8px 10px;
+  border: 1px solid #2f3031;
+  border-radius: 6px;
+  color: #9d9d9d;
+  font-size: 11.5px;
+}
+.vs-tip b {
+  color: #d4d4d4;
+}
+.vs-chip {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border: 1px solid #2f3031;
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+.vs-hint {
+  color: #6f7377;
+}

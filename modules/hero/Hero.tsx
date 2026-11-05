@@ -1,5 +1,5 @@
 import { DeviceShowcase } from "@/components/device-showcase";
-import type { ShowcaseProject } from "@/types/showcase";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 import { Arrow } from "@/components/arrow";
 import { Button } from "@/components/ui/button";
 import type { HeroContent } from "./types";
@@ -8,11 +8,13 @@ import { AnimatedHeroCopy } from "./AnimatedHeroCopy";
 export function Hero({
   content,
   projects,
+  video,
   nextSectionId,
 }: {
   content: HeroContent;
   nextSectionId: string;
   projects: readonly ShowcaseProject[];
+  video?: ShowcaseVideo;
 }) {
   return (
     <section
@@ -20,7 +22,9 @@ export function Hero({
       aria-labelledby="hero-title"
     >
       <div className="page-container relative grid items-start gap-10 pt-6 pb-10 sm:pt-8 lg:grid-cols-[1fr_1.1fr] lg:gap-8">
-        <div>
+        {/* min-w-0: the title side can never stretch its grid track, so the
+            laptop column keeps its size however wide the scrambled text gets. */}
+        <div className="min-w-0">
           <p className="eyebrow mb-9 flex items-center gap-3 text-muted-foreground">
             <span className="h-px w-8 shrink-0 bg-brand" />
             {content.eyebrow}
@@ -46,6 +50,7 @@ export function Hero({
         </div>
         <DeviceShowcase
           projects={projects}
+          video={video}
           nextSectionId={nextSectionId}
           className="device-showcase-wide"
         />

@@ -66,7 +66,10 @@ test("device screens cycle websites without controls beneath them", async ({
   });
   await stage.scrollIntoViewIfNeeded();
   await expect(stage).toHaveAccessibleName(/Don Elclasico Wears/, { timeout: 12000 });
-  await expect(page.locator(".device-showcase button")).toHaveCount(0);
+  // Only the screen itself (browser window, desktop, video player) may hold buttons.
+  await expect(
+    page.locator(".device-showcase button:not(.screen-browser *)"),
+  ).toHaveCount(0);
   await expect(page.getByText("SCROLL INTO WHAT WE BUILD")).toHaveCount(0);
 });
 

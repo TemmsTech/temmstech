@@ -18,7 +18,9 @@ import { disposeObject } from "@/lib/dispose-object";
 import { createScreenPortal } from "@/lib/screen-portal";
 import { createScreenBrowser, type ScreenBrowser } from "@/lib/screen-browser";
 import type { DeviceScene } from "@/lib/device-scene";
-import type { ShowcaseProject } from "@/types/showcase";
+import { onShowcasePlayer } from "@/lib/screen-video-player";
+import { watchPointerHover } from "@/lib/showcase-events";
+import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 
 type Point = { x: number; y: number };
 type Quad = [Point, Point, Point, Point];
@@ -35,6 +37,7 @@ export async function createTabletHeroScene(
   signal: AbortSignal,
   onContextLost: () => void,
   nextSectionId: string,
+  video?: ShowcaseVideo,
 ): Promise<DeviceScene> {
   const renderer = new WebGLRenderer({
     alpha: true,
@@ -58,6 +61,7 @@ export async function createTabletHeroScene(
   let finish: (() => void) | undefined;
   let browser: ScreenBrowser | undefined;
   let visibility: IntersectionObserver | undefined;
+  let stopPlayerWatch: (() => void) | undefined;
 
   const onLoss = (event: Event) => {
     event.preventDefault();
@@ -70,6 +74,7 @@ export async function createTabletHeroScene(
     disposed = true;
     cancelAnimationFrame(frame);
     observer?.disconnect();
+    stopPlayerWatch?.();
     portal?.dispose();
     visibility?.disconnect();
     browser?.dispose();
@@ -164,6 +169,7 @@ export async function createTabletHeroScene(
     const tabletBrowser = createScreenBrowser(host, projects, {
       kind: "tablet",
       aspect,
+      video,
     });
     browser = tabletBrowser;
     let inView = false;
@@ -189,6 +195,9 @@ export async function createTabletHeroScene(
     let scroll = 0;
     let clock = 0;
     let previousTime = 0;
+    // While the screen's video player is open the tablet holds still.
+    let swayPaused = false;
+    let pausedHold = 0; // 0 → 1 while the player is open
     let transition:
       | { index: number; start: number; from: number[]; swapped: boolean }
       | undefined;
@@ -235,9 +244,11 @@ export async function createTabletHeroScene(
     function draw(now: number) {
       frame = 0;
       if (disposed) return;
-      if (moving)
-        clock += previousTime ? Math.min(now - previousTime, 50) / 1000 : 0;
+      const dt = previousTime ? Math.min(now - previousTime, 50) / 1000 : 0;
+      if (moving) clock += dt;
       previousTime = now;
+      pausedHold +=
+        ((swayPaused ? 1 : 0) - pausedHold) * (1 - Math.exp(-dt * 6));
       const rest = poses[current % poses.length];
       body.rotation.set(rest[0], rest[1], rest[2]);
       if (transition) {
@@ -258,7 +269,7 @@ export async function createTabletHeroScene(
           transition = undefined;
         }
       }
-      const drift = 1 - scroll;
+      const drift = (1 - scroll) * (1 - pausedHold);
       const align = Math.min(1, scroll / 0.3);
       body.position.y = -0.1 + Math.sin(clock * 0.7) * 0.09 * drift;
       body.rotation.y += Math.sin(clock * 0.55) * 0.12 * drift;
@@ -289,11 +300,34 @@ export async function createTabletHeroScene(
         tabletBrowser.update(projected, scroll <= 0);
         syncLive();
       }
-      if (moving || transition) frame = requestAnimationFrame(draw);
+      if (
+        moving ||
+        transition ||
+        Math.abs((swayPaused ? 1 : 0) - pausedHold) > 0.001
+      )
+        frame = requestAnimationFrame(draw);
     }
     function schedule() {
       if (!frame && !disposed) frame = requestAnimationFrame(draw);
     }
+    let playerOpen = false;
+    let hovering = false;
+    const syncPause = () => {
+      swayPaused = playerOpen || hovering;
+      schedule();
+    };
+    const stopPlayer = onShowcasePlayer(host, (open) => {
+      playerOpen = open;
+      syncPause();
+    });
+    const stopHover = watchPointerHover(host, (over) => {
+      hovering = over;
+      syncPause();
+    });
+    stopPlayerWatch = () => {
+      stopPlayer();
+      stopHover();
+    };
     function resize() {
       const w = host.clientWidth;
       const h = host.clientHeight;
@@ -332,6 +366,9 @@ export async function createTabletHeroScene(
             from: [body.rotation.x, body.rotation.y, body.rotation.z],
           };
         schedule();
+      },
+      setAutoplay(enabled) {
+        tabletBrowser.setAuto(enabled);
       },
       setMotion(enabled) {
         moving = enabled;
