@@ -19,6 +19,7 @@ import {
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 import "./screen-desktop.css";
 import "./screen-explorer.css";
+import "./screen-terminal.css";
 import "./screen-vscode.css";
 
 type DeviceShowcaseProps = {

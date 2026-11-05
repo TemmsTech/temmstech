@@ -5,6 +5,7 @@ import {
 } from "@/lib/screen-desktop";
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
 import { createScreenExplorer } from "@/lib/screen-explorer";
+import { createScreenTerminal } from "@/lib/screen-terminal";
 import { createScreenVideoPlayer } from "@/lib/screen-video-player";
 import { createScreenVsCode } from "@/lib/screen-vscode";
 import {
@@ -237,6 +238,7 @@ export function createScreenBrowser(
         onCode: () => code?.toggle(),
         onOpenCode: () => code?.open(),
         onExplorer: () => explorer?.toggle(),
+        onTerminal: () => terminal?.toggle(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -244,7 +246,7 @@ export function createScreenBrowser(
     root.dataset.top = "browser";
     root.insertBefore(desk.element, win);
   }
-  // Static VS Code and File Explorer windows, on the Windows desktop only.
+  // Static VS Code, File Explorer and Terminal windows, on the Windows desktop only.
   // Whichever window was opened last sits on top (see raise).
   const code =
     desk && desktopStyle === "windows"
@@ -267,10 +269,20 @@ export function createScreenBrowser(
           onOpenFile: (path) => code?.openFile(path),
         })
       : undefined;
+  const terminal =
+    desk && desktopStyle === "windows"
+      ? createScreenTerminal(root, {
+          target: () => centreOf(desk.terminalButton, root),
+          onChange: (state) => {
+            desk.setTerminal(state);
+            if (state === "open") raise("terminal");
+          },
+        })
+      : undefined;
 
   // The windows' stacking order, lowest first; z-index 1.. follows it, below
   // the video layer. Opening or restoring a window moves it to the end.
-  type AppName = "browser" | "code" | "explorer";
+  type AppName = "browser" | "code" | "explorer" | "terminal";
   const stack: AppName[] = ["browser"];
   function raise(name: AppName) {
     const at = stack.indexOf(name);
@@ -281,6 +293,7 @@ export function createScreenBrowser(
       browser: win,
       code: code?.element,
       explorer: explorer?.element,
+      terminal: terminal?.element,
     };
     stack.forEach((app, index) => {
       const layer = layers[app];
@@ -527,6 +540,7 @@ export function createScreenBrowser(
       live = enabled;
       player?.setLive(enabled);
       code?.setLive(enabled);
+      terminal?.setLive(enabled);
       if (enabled) mountFrame(active);
       announceWindow();
     },
@@ -540,6 +554,7 @@ export function createScreenBrowser(
       desk?.dispose();
       code?.dispose();
       explorer?.dispose();
+      terminal?.dispose();
       player?.dispose();
       frames.clear();
       root.remove();

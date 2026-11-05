@@ -120,8 +120,11 @@ export type ScreenDesktop = {
   codeButton: HTMLElement;
   /** The File Explorer taskbar button (Windows desktop only). */
   explorerButton: HTMLElement;
+  /** The Terminal taskbar button (Windows desktop only). */
+  terminalButton: HTMLElement;
   setCode: (code: DesktopApp) => void;
   setExplorer: (explorer: DesktopApp) => void;
+  setTerminal: (terminal: DesktopApp) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -140,6 +143,8 @@ type DesktopHandlers = {
   onOpenCode: () => void;
   /** The File Explorer taskbar button was pressed. */
   onExplorer: () => void;
+  /** The Terminal taskbar button was pressed. */
+  onTerminal: () => void;
 };
 
 /**
@@ -151,7 +156,7 @@ type DesktopHandlers = {
 export function createScreenDesktop(
   host: HTMLElement,
   style: DesktopStyle,
-  { onApp, onOpen, onVideo, onCode, onOpenCode, onExplorer }: DesktopHandlers,
+  { onApp, onOpen, onVideo, onCode, onOpenCode, onExplorer, onTerminal }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
   const element = create("div", "screen-desktop");
@@ -224,6 +229,13 @@ export function createScreenDesktop(
   );
   explorerButton.dataset.state = "closed";
   explorerButton.setAttribute("aria-label", "Open File Explorer");
+  const terminalButton = taskbarButton(
+    "screen-desktop-terminal",
+    sprite("bar", BAR.terminal),
+    onTerminal,
+  );
+  terminalButton.dataset.state = "closed";
+  terminalButton.setAttribute("aria-label", "Open Terminal");
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -297,7 +309,7 @@ export function createScreenDesktop(
       item(BAR.teams),
       codeButton,
       item(BAR.brave),
-      item(BAR.terminal),
+      terminalButton,
       item(BAR.granola),
       item(BAR.chat),
       item(BAR.whatsapp),
@@ -341,6 +353,15 @@ export function createScreenDesktop(
     videoButton,
     codeButton,
     explorerButton,
+    terminalButton,
+    setTerminal(terminal) {
+      terminalButton.dataset.state = terminal;
+      terminalButton.setAttribute(
+        "aria-label",
+        terminal === "open" ? "Minimise Terminal" : "Open Terminal",
+      );
+      if (terminal !== "open") select();
+    },
     setExplorer(explorer) {
       explorerButton.dataset.state = explorer;
       explorerButton.setAttribute(
