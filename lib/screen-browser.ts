@@ -45,7 +45,12 @@ type WindowState = "full" | "windowed" | "minimised" | "closed";
 
 export type ScreenBrowser = {
   /** Pin the browser to the projected screen corners, or hide it. */
-  update: (corners: Quad, visible: boolean) => void;
+  update: (
+    corners: Quad,
+    visible: boolean,
+    /** How far down the screen stays visible (0–1) at its left, middle and right edges; the rest is covered by the model. */
+    cover?: readonly [number, number, number],
+  ) => void;
   /** Open the tab for a project; animated opens slide the page in. */
   setActive: (index: number, animate: boolean) => void;
   /** Load the live site of the open tab and run the video player, or unload and pause both. */
@@ -567,13 +572,18 @@ export function createScreenBrowser(
   setActive(0, false);
 
   return {
-    update(corners, visible) {
+    update(corners, visible, cover) {
       const transform = visible
         ? projectiveTransform(corners, width, height)
         : "none";
       const hide = transform === "none";
       if (root.hidden !== hide) root.hidden = hide;
-      if (!hide) root.style.transform = transform;
+      if (hide) return;
+      root.style.transform = transform;
+      const clip = cover
+        ? `polygon(0 0, ${width}px 0, ${width}px ${cover[2] * height}px, ${width / 2}px ${cover[1] * height}px, 0 ${cover[0] * height}px)`
+        : "";
+      if (root.style.clipPath !== clip) root.style.clipPath = clip;
     },
     setActive,
     setLive(enabled) {

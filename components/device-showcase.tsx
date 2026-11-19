@@ -1,6 +1,6 @@
 "use client";
 import { LiveFrame } from "@/components/live-frame";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useDeviceKind,
   useDeviceMotion,
@@ -9,6 +9,7 @@ import {
 } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { DeviceScene } from "@/lib/device-scene";
+import { createZoom } from "@/lib/device-zoom";
 import { SHOWCASE_INTERVAL_MS } from "@/lib/showcase-timing";
 import { onShowcasePlayer } from "@/lib/screen-video-player";
 import {
@@ -46,6 +47,17 @@ export function DeviceShowcase({
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
   );
+  // Interact mode (laptop only): the laptop grows over a dimmed backdrop.
+  // "closing" lasts while it shrinks back into the hero.
+  const [mode, setMode] = useState<"closed" | "open" | "closing">("closed");
+  const modeRef = useRef(mode);
+  const zoom = useRef<ReturnType<typeof createZoom> | null>(null);
+  const hint = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const changeMode = (next: typeof mode) => {
+    modeRef.current = next;
+    setMode(next);
+  };
   // The tab timer waits while the device is being turned by hand.
   const [holding, setHolding] = useState(false);
   useEffect(() => {
@@ -167,10 +179,87 @@ export function DeviceShowcase({
   useEffect(() => {
     scene.current?.setProject(index, !reducedMotion);
   }, [index, reducedMotion, status]);
-  useDeviceMotion(section, host, scene, status === "ready" && !reducedMotion);
+  useDeviceMotion(
+    section,
+    host,
+    scene,
+    status === "ready" && !reducedMotion,
+    mode !== "closed",
+  );
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const handle = createZoom(element, section.current?.closest("section") ?? null);
+    zoom.current = handle;
+    return () => {
+      handle.dispose();
+      zoom.current = null;
+    };
+  }, []);
+  const openZoom = () => {
+    if (kind !== "laptop" || status !== "ready" || modeRef.current === "open")
+      return;
+    // Once the visitor has started scrolling, the scroll zoom owns the laptop.
+    if (window.scrollY > 1) return;
+    changeMode("open");
+    scene.current?.setFocus?.(true);
+    zoom.current?.open(reducedMotion);
+  };
+  const closeZoom = useCallback(
+    (instant: boolean, refocus: boolean) => {
+      if (modeRef.current !== "open") return;
+      changeMode("closing");
+      scene.current?.setFocus?.(false);
+      zoom.current?.close(instant || reducedMotion, () => {
+        if (modeRef.current === "closing") changeMode("closed");
+      });
+      if (refocus) hint.current?.focus({ preventScroll: true });
+    },
+    [reducedMotion],
+  );
+  // The laptop scene is gone (tablet, phone, or a failed renderer): leave at once.
+  useEffect(() => {
+    if (kind !== "laptop" || status !== "ready") closeZoom(true, false);
+  }, [kind, status, closeZoom]);
+  useEffect(() => {
+    if (mode !== "open") return;
+    closeButton.current?.focus({ preventScroll: true });
+    const width = innerWidth;
+    const height = innerHeight;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeZoom(false, true);
+      } else if (event.key === "Tab") {
+        // Nothing else is reachable while it is open.
+        event.preventDefault();
+        closeButton.current?.focus({ preventScroll: true });
+      }
+    };
+    const onResize = () => {
+      if (innerWidth !== width || innerHeight !== height) closeZoom(true, false);
+    };
+    const onScroll = () => closeZoom(true, false);
+    const onHidden = () => {
+      if (document.hidden) closeZoom(true, false);
+    };
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, [mode, closeZoom]);
   if (!project) return null;
   return (
-    <div ref={section} className={cn("device-showcase min-w-0", className)}>
+    <div
+      ref={section}
+      className={cn("device-showcase relative min-w-0", className)}
+    >
       <div
         className="device-stage relative"
         role="img"
@@ -181,22 +270,6 @@ export function DeviceShowcase({
           ref={host}
           className={cn("absolute inset-0", status !== "ready" && "invisible")}
         />
-        {status === "ready" && (
-          <p className="device-hint" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            >
-              <path d="m5 3 14 7-6 2.2L10.8 19 5 3Zm8 9.2 5 5" />
-            </svg>
-            Zoom in &amp; interact
-          </p>
-        )}
         {status === "fallback" && (
           <div className="device-fallback" aria-hidden="true">
             <div className="fallback-laptop">
@@ -220,8 +293,57 @@ export function DeviceShowcase({
           </div>
         )}
       </div>
+      {status === "ready" && kind === "laptop" && (
+        <button
+          ref={hint}
+          type="button"
+          className="device-hint"
+          aria-expanded={mode === "open"}
+          onClick={openZoom}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="m5 3 14 7-6 2.2L10.8 19 5 3Zm8 9.2 5 5" />
+          </svg>
+          Zoom in &amp; interact
+        </button>
+      )}
+      {mode !== "closed" && (
+        <div className="device-backdrop" data-state={mode} aria-hidden="true" />
+      )}
+      {mode === "open" && (
+        <button
+          ref={closeButton}
+          type="button"
+          className="device-close"
+          onClick={() => closeZoom(false, true)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+          Close
+        </button>
+      )}
       <p role="status" className="sr-only">
-        {status === "ready"
+        {mode === "open"
+          ? "Interactive view open. Drag to turn the laptop. Press Escape to close."
+          : status === "ready"
           ? "3D showcase ready."
           : status === "fallback"
             ? "Showing static project previews because 3D is unavailable."

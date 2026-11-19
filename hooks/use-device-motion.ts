@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { observeSectionNavigation } from "@/lib/section-navigation";
 import { paceScroll } from "@/lib/pace-scroll";
 import type { DeviceScene } from "@/lib/device-scene";
@@ -8,7 +8,13 @@ export function useDeviceMotion(
   host: RefObject<HTMLDivElement | null>,
   scene: RefObject<DeviceScene | null>,
   enabled: boolean,
+  /** True while interact mode owns the host: scroll zoom and pacing stand down. */
+  standDown = false,
 ) {
+  const standing = useRef(standDown);
+  useEffect(() => {
+    standing.current = standDown;
+  }, [standDown]);
   useEffect(() => {
     const element = section.current;
     const canvasHost = host.current;
@@ -32,6 +38,7 @@ export function useDeviceMotion(
     };
     const update = () => {
       frame = 0;
+      if (standing.current) return;
       if (!enabled || document.hidden) {
         reset();
         return;
@@ -86,7 +93,7 @@ export function useDeviceMotion(
       schedule();
     });
     const stopPacing = paceScroll(() => {
-      if (!enabled || skipForAnchor) return null;
+      if (!enabled || skipForAnchor || standing.current) return null;
       const end = hero.getBoundingClientRect().bottom + scrollY;
       return { start: 0, end };
     });
