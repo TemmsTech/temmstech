@@ -158,6 +158,9 @@ export type ScreenDesktop = {
   /** The Claude taskbar button: only on show while the window is open or minimised (Windows desktop only). */
   claudeButton: HTMLElement;
   setClaude: (claude: DesktopApp) => void;
+  /** The ChatGPT taskbar button: only on show while the window is open or minimised (Windows desktop only). */
+  chatgptButton: HTMLElement;
+  setChatgpt: (chatgpt: DesktopApp) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -204,6 +207,10 @@ type DesktopHandlers = {
   onClaude?: () => void;
   /** The Claude desktop icon was double-clicked. */
   onOpenClaude?: () => void;
+  /** The ChatGPT taskbar button was pressed. */
+  onChatgpt?: () => void;
+  /** The ChatGPT desktop icon was double-clicked. */
+  onOpenChatgpt?: () => void;
 };
 
 /**
@@ -236,6 +243,8 @@ export function createScreenDesktop(
     onOpenChrome,
     onClaude,
     onOpenClaude,
+    onChatgpt,
+    onOpenChatgpt,
   }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
@@ -264,6 +273,7 @@ export function createScreenDesktop(
   let chromeIcon: HTMLButtonElement | undefined;
   let chromeCell = 0;
   let claudeIcon: HTMLButtonElement | undefined;
+  let gptIcon: HTMLButtonElement | undefined;
   let edgeIcon: HTMLButtonElement | undefined;
   if (!mac) {
     // Laid out like the real desktop: columns of eight, filled top to bottom,
@@ -289,6 +299,7 @@ export function createScreenDesktop(
       holder("screen-desktop-glyph", CHATGPT_ICON),
       "ChatGPT",
     );
+    gptIcon = chatgptIcon;
     chromeCell = DESKTOP_ICONS.indexOf("Google Chrome");
     chromeIcon = desktopIcons[chromeCell];
     claudeIcon = desktopIcons[DESKTOP_ICONS.indexOf("Claude")];
@@ -385,6 +396,11 @@ export function createScreenDesktop(
   claudeButton.hidden = true;
   claudeButton.dataset.state = "closed";
   claudeButton.setAttribute("aria-label", "Open Claude");
+  // ChatGPT is not pinned either: its button shows only while the window is open or minimised.
+  const chatgptButton = taskbarButton("screen-desktop-chatgpt", CHATGPT_ICON, () => onChatgpt?.());
+  chatgptButton.hidden = true;
+  chatgptButton.dataset.state = "closed";
+  chatgptButton.setAttribute("aria-label", "Open ChatGPT");
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -466,6 +482,7 @@ export function createScreenDesktop(
       binButton,
       chromeButton,
       claudeButton,
+      chatgptButton,
       videoButton,
     );
     const trayBox = create("div", "screen-tray");
@@ -499,6 +516,7 @@ export function createScreenDesktop(
       if (again && icon === vlcIcon) onOpenVlc?.();
       if (again && icon === chromeIcon) onOpenChrome?.();
       if (again && icon === claudeIcon) onOpenClaude?.();
+      if (again && icon === gptIcon) onOpenChatgpt?.();
     });
   }
   // A press anywhere else on the device clears the selection (presses on the
@@ -520,6 +538,16 @@ export function createScreenDesktop(
     vlcButton,
     chromeButton,
     claudeButton,
+    chatgptButton,
+    setChatgpt(chatgpt) {
+      chatgptButton.hidden = chatgpt === "closed";
+      chatgptButton.dataset.state = chatgpt;
+      chatgptButton.setAttribute(
+        "aria-label",
+        chatgpt === "open" ? "Minimise ChatGPT" : "Open ChatGPT",
+      );
+      if (chatgpt !== "open") select();
+    },
     setClaude(claude) {
       claudeButton.hidden = claude === "closed";
       claudeButton.dataset.state = claude;

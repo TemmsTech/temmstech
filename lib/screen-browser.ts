@@ -6,6 +6,7 @@ import {
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
 import { createScreenBrave } from "@/lib/screen-brave";
 import { createScreenChrome } from "@/lib/screen-chrome";
+import { createScreenChatgpt } from "@/lib/screen-chatgpt";
 import { createScreenClaude } from "@/lib/screen-claude";
 import { createScreenExplorer } from "@/lib/screen-explorer";
 import { createScreenGranola } from "@/lib/screen-granola";
@@ -274,6 +275,8 @@ export function createScreenBrowser(
         onOpenChrome: () => chromeApp?.open(),
         onClaude: () => claudeApp?.toggle(),
         onOpenClaude: () => claudeApp?.open(),
+        onChatgpt: () => chatgptApp?.toggle(),
+        onOpenChatgpt: () => chatgptApp?.open(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -354,6 +357,16 @@ export function createScreenBrowser(
           },
         })
       : undefined;
+  const chatgptApp =
+    desk && desktopStyle === "windows"
+      ? createScreenChatgpt(root, {
+          target: () => centreOf(desk.chatgptButton, root),
+          onChange: (state) => {
+            desk.setChatgpt(state);
+            if (state === "open") raise("chatgpt");
+          },
+        })
+      : undefined;
   const granola =
     desk && desktopStyle === "windows"
       ? createScreenGranola(root, {
@@ -404,7 +417,7 @@ export function createScreenBrowser(
 
   // The windows' stacking order, lowest first; z-index 1.. follows it, below
   // the video layer. Opening or restoring a window moves it to the end.
-  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola" | "bin" | "chrome" | "claude";
+  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola" | "bin" | "chrome" | "claude" | "chatgpt";
   const stack: AppName[] = ["browser"];
   function raise(name: AppName) {
     const at = stack.indexOf(name);
@@ -422,6 +435,7 @@ export function createScreenBrowser(
       bin: bin?.element,
       chrome: chromeApp?.element,
       claude: claudeApp?.element,
+      chatgpt: chatgptApp?.element,
     };
     stack.forEach((app, index) => {
       const layer = layers[app];
@@ -696,6 +710,7 @@ export function createScreenBrowser(
       bin?.dispose();
       chromeApp?.dispose();
       claudeApp?.dispose();
+      chatgptApp?.dispose();
       player?.dispose();
       vlc?.dispose();
       frames.clear();

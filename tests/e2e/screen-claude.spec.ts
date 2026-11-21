@@ -6,9 +6,11 @@ test("the laptop's Claude window opens from its desktop icon, switches between c
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  await expect(
-    page.getByRole("img", { name: /Laptop and iPhone/ }),
-  ).toHaveAttribute("data-renderer", "ready", { timeout: 30000 });
+  await expect(page.locator(".device-stage").first()).toHaveAttribute(
+    "data-renderer",
+    "ready",
+    { timeout: 30000 },
+  );
 
   const button = page.locator(".screen-desktop-claude").first();
   const app = page.locator(".screen-claude").first();

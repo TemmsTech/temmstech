@@ -1,0 +1,717 @@
+/* The ChatGPT (Codex) window on the Windows desktop (lib/screen-chatgpt.ts).
+   Same 1280px layout units as .screen-browser. Only transforms and opacity
+   animate. Sizes are a dark Codex desktop screenshot at 1917px scaled by
+   two thirds; colours are sampled from it. */
+
+.screen-chatgpt {
+  --gp-bg: #171717;
+  --gp-side: #1c1c1d;
+  --gp-raise: #262627;
+  --gp-line: #2c2c2e;
+  --gp-ink: #ececec;
+  --gp-soft: #b4b4b4;
+  --gp-faint: #858585;
+  --gp-blue: #1f4390;
+  --gp-send: #3f73d8;
+  position: absolute;
+  inset: 0 0 var(--desk-bottom, 48px) 0;
+  z-index: 3;
+  /* The root only holds the window; presses fall through to the desktop. */
+  pointer-events: none;
+}
+.gp-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--gp-bg);
+  color: var(--gp-ink);
+  font: 10.5px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  pointer-events: auto;
+  transform-origin: 50% 50%;
+  transform: translate(0, 0) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+.screen-chatgpt[data-window="windowed"] .gp-window {
+  transform: scale(0.78);
+  border-radius: 12px;
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(255 255 255 / 0.12);
+}
+.screen-chatgpt:is([data-window="minimised"], [data-window="closed"]) .gp-window {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+.gp-window,
+.gp-window * {
+  cursor: default;
+  user-select: none;
+}
+.gp-window button {
+  font: inherit;
+}
+.gp-window svg {
+  flex: none;
+}
+
+/* ---- Title bar ------------------------------------------------------------- */
+.gp-bar {
+  display: flex;
+  height: 31px;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  background: var(--gp-bg);
+}
+.gp-tool {
+  display: grid;
+  width: 26px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cfcfcf;
+  place-items: center;
+}
+.gp-tool[data-dim] {
+  color: #5f5f5f;
+}
+.gp-menu {
+  display: flex;
+  gap: 6px;
+  margin-left: 12px;
+  color: var(--gp-ink);
+  font-size: 11.5px;
+}
+.gp-menu span {
+  padding: 2px 8px;
+}
+.gp-controls {
+  display: flex;
+  height: 100%;
+  margin-left: auto;
+}
+.gp-control {
+  display: grid;
+  width: 38px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d4d4d4;
+  place-items: center;
+}
+.gp-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.gp-control[data-control="close"]:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ---- Body ------------------------------------------------------------------- */
+.gp-shell {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+.gp-shell[data-side="closed"] .gp-side {
+  display: none;
+}
+.gp-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #444 transparent;
+  scrollbar-width: thin;
+}
+
+/* ---- Icon rail ---------------------------------------------------------------- */
+.gp-rail {
+  display: flex;
+  width: 44px;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  background: var(--gp-bg);
+}
+.gp-rail-btn {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: #a9a9a9;
+  place-items: center;
+}
+.gp-rail-btn[data-on] {
+  background: #2a2a2c;
+  color: #fff;
+}
+.gp-rail-git {
+  margin-top: auto;
+  margin-bottom: 10px;
+}
+
+/* ---- Sidebar ------------------------------------------------------------------- */
+.gp-side {
+  display: flex;
+  width: 198px;
+  flex: none;
+  flex-direction: column;
+  padding: 8px 8px 8px 10px;
+  border-radius: 12px 0 0 0;
+  background: var(--gp-side);
+}
+.gp-side-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px 6px;
+}
+.gp-side-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14.5px;
+}
+.gp-side-name b {
+  font-weight: 600;
+}
+.gp-side-tools {
+  display: flex;
+  gap: 12px;
+  color: #a9a9a9;
+}
+.gp-new,
+.gp-projects {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gp-ink);
+  font-size: 11.5px;
+  text-align: left;
+}
+.gp-new b,
+.gp-projects b {
+  font-weight: 400;
+}
+.gp-projects svg {
+  margin-left: -3px;
+  color: var(--gp-soft);
+  transition: transform 200ms var(--ease-out);
+}
+.gp-projects[data-open="true"] svg {
+  transform: rotate(90deg);
+}
+.gp-new:hover,
+.gp-projects:hover,
+.gp-chat-item:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+.gp-project-list {
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px 22px;
+  color: var(--gp-soft);
+  font-size: 11px;
+}
+.gp-projects-open .gp-project-list {
+  display: flex;
+}
+.gp-project-list span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 4px;
+}
+.gp-side-label {
+  padding: 12px 6px 4px;
+  color: var(--gp-faint);
+  font-size: 11px;
+}
+.gp-side-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+.gp-chat-item {
+  overflow: hidden;
+  flex: none;
+  padding: 6px 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gp-ink);
+  font-size: 11.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gp-chat-item[data-active] {
+  background: #2b2b2d;
+}
+.gp-side-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 2px 0;
+}
+.gp-dl,
+.gp-av {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  place-items: center;
+}
+.gp-dl {
+  background: #f1f1f1;
+  color: #111;
+}
+.gp-av {
+  background: #3a3a3c;
+  color: #cfcfcf;
+  font-size: 8.5px;
+}
+
+/* ---- Main column ---------------------------------------------------------------- */
+.gp-main {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  border-left: 1px solid var(--gp-line);
+  background: var(--gp-bg);
+}
+.gp-head {
+  display: flex;
+  height: 38px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px 0 20px;
+  border-bottom: 1px solid var(--gp-line);
+}
+.gp-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.gp-title b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gp-head-tools {
+  display: flex;
+  gap: 8px;
+  color: #cfcfcf;
+}
+.gp-head-btn {
+  display: grid;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  place-items: center;
+}
+.gp-head-btn[data-on] {
+  background: #2c2c2e;
+  color: #fff;
+}
+.gp-chat {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+/* With the card on, the chat sits in the room left of it, as in the real app. */
+.gp-main[data-info="open"] .gp-chat {
+  padding-right: 250px;
+}
+.gp-thread {
+  min-height: 0;
+  flex: 1;
+}
+.gp-thread-in {
+  display: flex;
+  width: min(100% - 40px, 613px);
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 auto;
+  padding: 16px 0 14px;
+}
+
+/* ---- Messages ------------------------------------------------------------------ */
+.gp-user {
+  display: flex;
+  justify-content: flex-end;
+}
+.gp-bubble {
+  position: relative;
+  max-width: 88%;
+  padding: 7px 14px;
+  border-radius: 14px;
+  background: var(--gp-blue);
+  color: #f1f5ff;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.gp-bubble p {
+  margin: 0;
+}
+.gp-bubble[data-clamped] p {
+  max-height: 4.5em;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+.gp-more {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #b9c9f0;
+  font-size: 10.5px;
+}
+.gp-bubble[data-clamped] .gp-more {
+  margin-top: -6px;
+}
+.gp-bubble:not([data-clamped]) .gp-more svg {
+  transform: rotate(180deg);
+}
+.gp-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--gp-line);
+  border-radius: 14px;
+  font-size: 11.5px;
+}
+.gp-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.gp-reply p {
+  margin: 0;
+  color: #e6e6e6;
+}
+.gp-reply code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #2a2a2c;
+  font: 10px "Cascadia Code", Consolas, monospace;
+}
+.gp-ran-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--gp-faint);
+  font-size: 11.5px;
+}
+.gp-ran-head:hover {
+  color: var(--gp-soft);
+}
+.gp-ran-body {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.gp-ran[data-open="true"] .gp-ran-body {
+  display: flex;
+}
+.gp-ran pre {
+  margin: 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #212122;
+  color: var(--gp-soft);
+  font: 10px/1.5 "Cascadia Code", Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+.gp-ran pre b {
+  color: #e8e8e8;
+  font-weight: 400;
+}
+.gp-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  color: var(--gp-faint);
+}
+.gp-divider::before,
+.gp-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--gp-line);
+  content: "";
+}
+.gp-divider span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.gp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 90px;
+}
+.gp-empty-logo {
+  display: block;
+  width: 38px;
+  height: 38px;
+}
+.gp-empty h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* ---- Jump button, limit card, reply box ------------------------------------------- */
+.gp-jump {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #3a3a3c;
+  border-radius: 50%;
+  background: #262627;
+  color: #ddd;
+  place-items: center;
+  transform: translateX(-50%);
+  transition: opacity 200ms var(--ease-out);
+}
+.gp-jump[data-show="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.gp-dock {
+  position: relative;
+  display: flex;
+  width: min(100% - 40px, 613px);
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 auto;
+  padding: 6px 0 12px;
+}
+.gp-dock[data-limit="false"] .gp-limit {
+  display: none;
+}
+.gp-limit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--gp-raise);
+}
+.gp-limit span {
+  display: flex;
+  flex-direction: column;
+}
+.gp-limit b {
+  font-size: 12px;
+  font-weight: 600;
+}
+.gp-limit small {
+  color: var(--gp-soft);
+  font-size: 11px;
+}
+.gp-limit u {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #343436;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.gp-composer {
+  display: flex;
+  min-height: 62px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px 8px 14px;
+  border-radius: 16px;
+  background: #2f2f30;
+}
+.gp-prompt {
+  color: #777;
+  font-size: 12px;
+}
+.gp-composer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.gp-plus {
+  display: grid;
+  width: 20px;
+  place-items: center;
+  color: #d5d5d5;
+}
+.gp-access {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e0743a;
+}
+.gp-access b {
+  font-weight: 400;
+}
+.gp-model {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--gp-faint);
+}
+.gp-model b {
+  color: var(--gp-ink);
+  font-weight: 400;
+}
+.gp-mic {
+  color: #d5d5d5;
+}
+.gp-send {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gp-send);
+  color: #fff;
+  place-items: center;
+}
+
+/* ---- Outputs and Sources card (floats on the right of the chat) ----------------------- */
+.gp-main[data-info="closed"] .gp-info {
+  display: none;
+}
+.gp-info {
+  position: absolute;
+  top: 46px;
+  right: 8px;
+  display: flex;
+  width: 250px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  border-radius: 14px;
+  background: #262627;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.35);
+}
+.gp-card[hidden] {
+  display: none;
+}
+.gp-outputs + .gp-sources {
+  padding-top: 8px;
+  border-top: 1px solid #343436;
+}
+.gp-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 4px;
+  color: var(--gp-soft);
+  font-size: 11.5px;
+}
+.gp-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #dcdcdc;
+  font-size: 11.5px;
+  text-align: left;
+}
+.gp-row:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+.gp-row[data-selected] {
+  background: #343437;
+}
+.gp-row-icon {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--gp-soft);
+  place-items: center;
+}
+.gp-row-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.gp-row-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gp-viewall {
+  color: var(--gp-faint);
+}
