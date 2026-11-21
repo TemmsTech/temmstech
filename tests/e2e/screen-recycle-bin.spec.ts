@@ -15,7 +15,7 @@ test("the laptop's Recycle Bin opens from its desktop icon, restores and deletes
   const app = page.locator(".screen-recycle-bin").first();
   const button = page.locator(".screen-desktop-bin").first();
   const icon = page.locator('.screen-desktop-icon[aria-label="Recycle Bin"]').first();
-  const click = (selector: string, init?: MouseEventInit) =>
+  const click = (selector: string, init?: { ctrlKey?: boolean }) =>
     app
       .locator(selector)
       .first()
