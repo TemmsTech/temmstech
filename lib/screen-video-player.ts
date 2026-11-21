@@ -1,4 +1,5 @@
 import { WINDOW_ICONS } from "@/lib/window-controls";
+import { VLC_CONE_SVG } from "@/lib/screen-vlc-icon";
 import type { ShowcaseVideo } from "@/types/showcase";
 
 /** Fired on the device host when a screen's video player opens or minimises. */
@@ -37,7 +38,18 @@ export type ScreenVideoPlayer = {
   setLive: (enabled: boolean) => void;
   /** Bring the player back from the taskbar (or the corner chip). */
   restore: () => void;
+  /** Send the player to its taskbar button (the taskbar button of an open player does this). */
+  minimise: () => void;
   dispose: () => void;
+};
+
+export type ScreenVideoPlayerOptions = {
+  /**
+   * "vlc" puts the same player in a VLC media player window. That window never
+   * opens by itself: it waits for the desktop icon or the taskbar button, and
+   * only loads the video the first time it is opened. Needs a taskbar.
+   */
+  skin?: "vlc";
 };
 
 /**
@@ -55,6 +67,17 @@ export type PlayerDock = {
 const formatTime = (seconds: number) => {
   const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
+
+/** VLC's clock: 00:08, or 1:02:03 for anything over an hour. */
+const formatClock = (seconds: number) => {
+  const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(total % 60)}`
+    : `${pad(minutes)}:${pad(total % 60)}`;
 };
 
 function create<K extends keyof HTMLElementTagNameMap>(
@@ -90,6 +113,35 @@ const ICONS = {
   ),
 };
 
+const VLC_FILL = 'fill="currentColor" stroke="none"';
+const VLC_ICONS = {
+  play: svg(`<path d="M7 4.5v15l12-7.5z" ${VLC_FILL}/>`),
+  pause: svg(
+    `<rect x="6.5" y="5" width="4" height="14" ${VLC_FILL}/><rect x="13.5" y="5" width="4" height="14" ${VLC_FILL}/>`,
+  ),
+  previous: svg(
+    `<rect x="5" y="5" width="2.4" height="14" ${VLC_FILL}/><path d="M19 5v14L9 12z" ${VLC_FILL}/>`,
+  ),
+  next: svg(
+    `<rect x="16.6" y="5" width="2.4" height="14" ${VLC_FILL}/><path d="M5 5v14l10-7z" ${VLC_FILL}/>`,
+  ),
+  stop: svg(`<rect x="6" y="6" width="12" height="12" ${VLC_FILL}/>`),
+  fullscreen: svg(`<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>`),
+  settings: svg(
+    `<path d="M6 4v16M12 4v16M18 4v16"/><rect x="3.8" y="13" width="4.4" height="3" ${VLC_FILL}/><rect x="9.8" y="6.5" width="4.4" height="3" ${VLC_FILL}/><rect x="15.8" y="10.5" width="4.4" height="3" ${VLC_FILL}/>`,
+  ),
+  playlist: svg(
+    `<path d="M9 6h11M9 12h11M9 18h11"/><rect x="3.4" y="4.8" width="2.4" height="2.4" ${VLC_FILL}/><rect x="3.4" y="10.8" width="2.4" height="2.4" ${VLC_FILL}/><rect x="3.4" y="16.8" width="2.4" height="2.4" ${VLC_FILL}/>`,
+  ),
+  loop: svg(
+    `<path d="M4 11V9a3 3 0 0 1 3-3h13"/><path d="m17 3 3 3-3 3"/><path d="M20 13v2a3 3 0 0 1-3 3H4"/><path d="m7 21-3-3 3-3"/>`,
+  ),
+  random: svg(
+    `<path d="M3 7h3.5c5 0 5 10 10.5 10H21"/><path d="m18 14 3 3-3 3"/><path d="M3 17h3.5c1.8 0 2.9-.8 3.8-2M13.7 9.2c.9-1.3 2-2.2 3.3-2.2H21"/><path d="m18 4 3 3-3 3"/>`,
+  ),
+};
+const VLC_MENU = ["Media", "Playback", "Audio", "Video", "Subtitle", "Tools", "View", "Help"];
+
 function button(className: string, label: string, icons: string) {
   const node = create("button", className);
   node.type = "button";
@@ -114,28 +166,42 @@ export function createScreenVideoPlayer(
   host: HTMLElement,
   media: ShowcaseVideo,
   taskbar?: PlayerDock,
+  options?: ScreenVideoPlayerOptions,
 ): ScreenVideoPlayer {
+  // The VLC window only makes sense beside a taskbar: it shrinks into its button.
+  const vlc = options?.skin === "vlc" && taskbar !== undefined;
+  const cls = (hud: string, vlcName: string) => (vlc ? vlcName : hud);
+  const fileName = media.src.split("?")[0].split("/").pop() || media.title;
   const layer = create("div", "screen-player-layer");
   layer.dataset.state = "idle";
   if (taskbar) layer.dataset.dock = "taskbar";
   const scrim = create("div", "screen-player-scrim");
 
-  const windowEl = create("div", "screen-player");
-  const bar = create("div", "screen-player-bar");
-  const title = create("span", "screen-player-title");
-  title.textContent = media.title;
-  const windowButtons = create("div", "screen-player-wincontrols");
-  const minButton = button("screen-player-win", "Minimise video", WINDOW_ICONS.minimise);
-  const maxButton = button("screen-player-win", "Restore video down", WINDOW_ICONS.restore);
-  const closeButton = button("screen-player-win", "Close video", WINDOW_ICONS.close);
+  const windowEl = create(
+    "div",
+    vlc ? "screen-player screen-player--vlc" : "screen-player",
+  );
+  const bar = create("div", cls("screen-player-bar", "vlc-titlebar"));
+  const title = create("span", cls("screen-player-title", "vlc-title"));
+  title.textContent = vlc ? `${fileName} - VLC media player` : media.title;
+  const windowButtons = create("div", cls("screen-player-wincontrols", "vlc-wincontrols"));
+  const winClass = cls("screen-player-win", "vlc-win");
+  const minButton = button(winClass, "Minimise video", WINDOW_ICONS.minimise);
+  const maxButton = button(winClass, "Restore video down", WINDOW_ICONS.restore);
+  const closeButton = button(winClass, "Close video", WINDOW_ICONS.close);
   minButton.dataset.action = "minimise";
   maxButton.dataset.action = "maximise";
   closeButton.dataset.action = "close";
   windowButtons.append(minButton, maxButton, closeButton);
-  bar.append(title, windowButtons);
+  if (vlc) {
+    const cone = create("span", "vlc-cone");
+    cone.innerHTML = VLC_CONE_SVG;
+    bar.append(cone, title, windowButtons);
+  } else bar.append(title, windowButtons);
 
-  const video = create("video", "screen-player-video");
-  video.muted = true;
+  const video = create("video", cls("screen-player-video", "vlc-video"));
+  // The VLC window opens from a click, so it can start with sound.
+  video.muted = !vlc;
   video.loop = false;
   video.playsInline = true;
   video.preload = "none";
@@ -152,7 +218,7 @@ export function createScreenVideoPlayer(
     ICONS.back,
   );
   const playButton = button(
-    "screen-hud-btn screen-hud-play",
+    cls("screen-hud-btn screen-hud-play", "vlc-btn vlc-play"),
     "Play video",
     `<span class="icon-play">${ICONS.play}</span><span class="icon-pause">${ICONS.pause}</span>`,
   );
@@ -161,18 +227,23 @@ export function createScreenVideoPlayer(
     `Forward ${SKIP_SECONDS} seconds`,
     ICONS.forward,
   );
-  const elapsed = create("span", "screen-hud-time");
-  const remaining = create("span", "screen-hud-time");
-  const track = create("div", "screen-hud-track");
-  const rail = create("div", "screen-hud-rail");
-  const fill = create("div", "screen-hud-fill");
+  const elapsed = create("span", cls("screen-hud-time", "vlc-time"));
+  const remaining = create("span", cls("screen-hud-time", "vlc-time"));
+  const track = create("div", cls("screen-hud-track", "vlc-track"));
+  const rail = create("div", cls("screen-hud-rail", "vlc-rail"));
+  const fill = create("div", cls("screen-hud-fill", "vlc-fill"));
   rail.appendChild(fill);
-  const thumb = create("div", "screen-hud-thumb");
+  const thumb = create("div", cls("screen-hud-thumb", "vlc-thumb"));
   track.append(rail, thumb);
-  const times = create("div", "screen-hud-times");
+  const times = create("div", cls("screen-hud-times", "vlc-seek"));
+  // VLC's volume: a wedge you press or drag along, with the level written above it.
+  const volumeTrack = create("div", "vlc-volume vlc-extra");
+  const volumeWedge = create("div", "vlc-volume-wedge");
+  const volumeFill = create("div", "vlc-volume-fill");
+  const volumeLabel = create("span", "vlc-volume-label vlc-extra");
   times.append(elapsed, track, remaining);
   const muteButton = button(
-    "screen-hud-btn screen-hud-mute",
+    cls("screen-hud-btn screen-hud-mute", "vlc-btn vlc-mute"),
     "Unmute video",
     `<span class="icon-on">${ICONS.soundOn}</span><span class="icon-off">${ICONS.soundOff}</span>`,
   );
@@ -181,7 +252,106 @@ export function createScreenVideoPlayer(
   const buttons = create("div", "screen-hud-buttons");
   buttons.append(muteButton, transport, create("span", "screen-hud-spacer"));
   hud.append(times, buttons);
-  windowEl.append(bar, video, hud);
+  if (vlc) {
+    // The VLC window: menu row, black stage around the same <video>, then the
+    // seek bar (the same one, restyled) and VLC's control row.
+    const menu = create("div", "vlc-menu");
+    for (const label of VLC_MENU) {
+      const item = create("span", "vlc-menu-item");
+      item.textContent = label;
+      menu.appendChild(item);
+    }
+    const stage = create("div", "vlc-stage");
+    stage.appendChild(video);
+
+    const stopButton = button("vlc-btn", "Stop", VLC_ICONS.stop);
+    const previousButton = button("vlc-btn", "Previous", VLC_ICONS.previous);
+    const nextButton = button("vlc-btn", "Next", VLC_ICONS.next);
+    const fullscreenButton = button("vlc-btn vlc-extra", "Fullscreen", VLC_ICONS.fullscreen);
+    const settingsButton = button("vlc-btn vlc-extra", "Extended settings", VLC_ICONS.settings);
+    const playlistButton = button("vlc-btn vlc-extra", "Playlist", VLC_ICONS.playlist);
+    const loopButton = button("vlc-btn vlc-extra", "Loop", VLC_ICONS.loop);
+    const randomButton = button("vlc-btn vlc-extra", "Random", VLC_ICONS.random);
+
+    // Stop: back to the start and a black screen, like VLC. Previous restarts
+    // the video; Next, with only one video in the list, stops it.
+    const stop = () => {
+      video.pause();
+      video.currentTime = 0;
+      setStopped(true);
+      syncProgress();
+      syncPlayback();
+    };
+    stopButton.addEventListener("click", stop);
+    nextButton.addEventListener("click", stop);
+    previousButton.addEventListener("click", () => {
+      video.currentTime = 0;
+      syncProgress();
+    });
+
+    // Fullscreen fills this window (not the whole page, which the device screen
+    // is mapped onto): the title bar and menu go, the controls show on hover.
+    const toggleFullscreen = () => {
+      const on = windowEl.dataset.fullscreen !== "true";
+      windowEl.dataset.fullscreen = String(on);
+      fullscreenButton.setAttribute("aria-pressed", String(on));
+    };
+    fullscreenButton.addEventListener("click", toggleFullscreen);
+    stage.addEventListener("dblclick", toggleFullscreen);
+
+    loopButton.addEventListener("click", () => {
+      const on = loopButton.dataset.active !== "true";
+      loopButton.dataset.active = String(on);
+      loopButton.setAttribute("aria-pressed", String(on));
+      video.loop = on;
+    });
+    randomButton.addEventListener("click", () => {
+      const on = randomButton.dataset.active !== "true";
+      randomButton.dataset.active = String(on);
+      randomButton.setAttribute("aria-pressed", String(on));
+    });
+
+    // offsetX is in the track's own (untransformed) space, as for the seek bar.
+    const setVolume = (event: PointerEvent) => {
+      if (!volumeTrack.offsetWidth) return;
+      const level = Math.max(0, Math.min(1, event.offsetX / volumeTrack.offsetWidth));
+      video.volume = level;
+      video.muted = level === 0;
+    };
+    volumeTrack.addEventListener("pointerdown", (event) => {
+      volumeTrack.setPointerCapture(event.pointerId);
+      setVolume(event);
+    });
+    volumeTrack.addEventListener("pointermove", (event) => {
+      if (volumeTrack.hasPointerCapture(event.pointerId)) setVolume(event);
+    });
+    volumeWedge.appendChild(volumeFill);
+    volumeTrack.appendChild(volumeWedge);
+    const volumeGroup = create("div", "vlc-volume-group");
+    volumeGroup.append(muteButton, volumeLabel, volumeTrack);
+
+    const gap = () => create("span", "vlc-gap");
+    const controls = create("div", "vlc-controls");
+    controls.append(
+      playButton,
+      previousButton,
+      stopButton,
+      nextButton,
+      gap(),
+      fullscreenButton,
+      settingsButton,
+      gap(),
+      playlistButton,
+      loopButton,
+      randomButton,
+      create("span", "vlc-spacer"),
+      volumeGroup,
+    );
+    const bottom = create("div", "vlc-bottom");
+    bottom.append(times, controls);
+    windowEl.append(bar, menu, stage, bottom);
+    setStopped(true);
+  } else windowEl.append(bar, video, hud);
 
   const dock = button(
     "screen-player-dock",
@@ -201,13 +371,16 @@ export function createScreenVideoPlayer(
   parent.appendChild(layer);
 
   // open: big and playing · mini: small corner window · docked: closed to the chip
-  let state: "idle" | "open" | "mini" | "docked" | "closed" | "failed" = "idle";
+  // The VLC window starts closed on its taskbar button; the intro player starts idle and opens itself.
+  let state: "idle" | "open" | "mini" | "docked" | "closed" | "failed" = vlc
+    ? "closed"
+    : "idle";
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
   let live = false;
   let ready = false;
   let loading = false;
   let announced = false;
-  let reported: "idle" | "open" | "mini" | "docked" | "closed" = "idle";
+  let reported: "idle" | "open" | "mini" | "docked" | "closed" = vlc ? "closed" : "idle";
 
   // Shrink target: the taskbar button, measured when the window sets off.
   function aim() {
@@ -273,6 +446,11 @@ export function createScreenVideoPlayer(
       "aria-label",
       video.muted ? "Unmute video" : "Mute video",
     );
+    if (vlc) {
+      const level = video.muted ? 0 : video.volume;
+      volumeFill.style.width = `${level * 100}%`;
+      volumeLabel.textContent = `${Math.round(level * 100)}%`;
+    }
   }
 
   function syncProgress() {
@@ -280,6 +458,11 @@ export function createScreenVideoPlayer(
       video.duration > 0 ? Math.min(1, video.currentTime / video.duration) : 0;
     fill.style.transform = `scaleX(${ratio})`;
     thumb.style.left = `${ratio * 100}%`;
+    if (vlc) {
+      elapsed.textContent = formatClock(video.currentTime);
+      remaining.textContent = video.duration > 0 ? formatClock(video.duration) : "--:--";
+      return;
+    }
     elapsed.textContent = formatTime(video.currentTime);
     remaining.textContent = `-${formatTime(
       video.duration > 0 ? video.duration - video.currentTime : 0,
@@ -289,7 +472,43 @@ export function createScreenVideoPlayer(
   function play() {
     // Muted autoplay is normally allowed; if it is refused, shrink the player
     // rather than leave the device waiting on a paused video.
-    video.play().catch(() => shrink());
+    video.play().catch(() => {
+      if (!vlc) {
+        shrink();
+        return;
+      }
+      // VLC tries with sound first; if the browser still refuses, try muted.
+      if (!video.muted) {
+        video.muted = true;
+        video.play().catch(() => {});
+      }
+    });
+  }
+
+  // VLC shows a black screen while it is stopped or has not started yet.
+  function setStopped(on: boolean) {
+    windowEl.dataset.stopped = String(on);
+  }
+
+  // The video is fetched once: when the intro player goes live, or when the
+  // VLC window is first opened.
+  function ensureLoaded() {
+    if (loading) return;
+    loading = true;
+    video.preload = "auto";
+    video.src = media.src;
+  }
+
+  // The taskbar button of an open window sends it away, from the corner window too.
+  function tuck() {
+    if (state === "open") minimise();
+    else if (state === "mini" && taskbar) {
+      clearTimeout(closeTimer);
+      video.pause();
+      aim();
+      state = "docked";
+      sync();
+    }
   }
 
   // Restore down (the middle window button): the big player shrinks to the
@@ -320,6 +539,7 @@ export function createScreenVideoPlayer(
   function maximise() {
     if (state !== "mini" && state !== "docked" && state !== "closed") return;
     clearTimeout(closeTimer);
+    ensureLoaded();
     if (video.ended || video.currentTime >= video.duration - 0.25)
       video.currentTime = 0;
     state = "open";
@@ -371,14 +591,24 @@ export function createScreenVideoPlayer(
     tryOpen();
   });
   video.addEventListener("error", fail);
-  video.addEventListener("play", syncPlayback);
+  video.addEventListener("play", () => {
+    if (vlc) setStopped(false);
+    syncPlayback();
+  });
   video.addEventListener("pause", syncPlayback);
   video.addEventListener("ended", () => {
     syncPlayback();
+    if (vlc) {
+      // VLC stays open on a black screen when the video finishes.
+      setStopped(true);
+      return;
+    }
     if (state === "open") shrink();
     else if (state === "mini") scheduleClose();
   });
   video.addEventListener("timeupdate", syncProgress);
+  video.addEventListener("loadedmetadata", syncProgress);
+  video.addEventListener("durationchange", syncProgress);
   video.addEventListener("volumechange", syncSound);
 
   const skip = (seconds: number) => {
@@ -434,15 +664,12 @@ export function createScreenVideoPlayer(
 
   return {
     restore: maximise,
+    minimise: tuck,
     setLive(enabled) {
       if (enabled === live || state === "failed") return;
       live = enabled;
       if (enabled) {
-        if (!loading) {
-          loading = true;
-          video.preload = "auto";
-          video.src = media.src;
-        }
+        if (!vlc) ensureLoaded();
         if (state === "open" || (state === "mini" && !video.ended)) play();
         else tryOpen();
       } else if (state === "open" || state === "mini") video.pause();

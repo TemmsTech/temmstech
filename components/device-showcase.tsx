@@ -19,9 +19,11 @@ import {
 } from "@/lib/showcase-events";
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 import "./screen-brave.css";
+import "./screen-chrome.css";
 import "./screen-desktop.css";
 import "./screen-explorer.css";
 import "./screen-granola.css";
+import "./screen-recycle-bin.css";
 import "./screen-terminal.css";
 import "./screen-whatsapp.css";
 import "./screen-vscode.css";
@@ -32,12 +34,15 @@ type DeviceShowcaseProps = {
   video?: ShowcaseVideo;
   className?: string;
   nextSectionId: string;
+  /** Dev scratch page only: open interact mode as soon as the laptop is ready. */
+  startOpen?: boolean;
 };
 export function DeviceShowcase({
   projects,
   video,
   className,
   nextSectionId,
+  startOpen = false,
 }: DeviceShowcaseProps) {
   const host = useRef<HTMLDivElement>(null);
   const section = useRef<HTMLDivElement>(null);
@@ -205,6 +210,17 @@ export function DeviceShowcase({
     scene.current?.setFocus?.(true);
     zoom.current?.open(reducedMotion);
   };
+  // Scratch page: zoom in once, as soon as the laptop is ready.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (!startOpen || autoOpened.current) return;
+    if (kind !== "laptop" || status !== "ready") return;
+    const timer = setTimeout(() => {
+      autoOpened.current = true;
+      openZoom();
+    }, 0);
+    return () => clearTimeout(timer);
+  });
   const closeZoom = useCallback(
     (instant: boolean, refocus: boolean) => {
       if (modeRef.current !== "open") return;
@@ -221,6 +237,34 @@ export function DeviceShowcase({
   useEffect(() => {
     if (kind !== "laptop" || status !== "ready") closeZoom(true, false);
   }, [kind, status, closeZoom]);
+  // Close sits exactly over the navbar's "Let's talk" button while interact
+  // mode is open (the backdrop already covers the navbar). Without that button
+  // on screen (phones), the CSS position is used instead.
+  useEffect(() => {
+    if (mode !== "open") return;
+    const place = () => {
+      const close = closeButton.current;
+      if (!close) return;
+      const talk = [
+        ...document.querySelectorAll<HTMLElement>('.site-navbar a[href="/contact"]'),
+      ].find((link) => link.getBoundingClientRect().width > 0);
+      if (!talk) {
+        for (const key of ["top", "left", "width", "height"] as const)
+          close.style.removeProperty(key);
+        close.style.removeProperty("right");
+        return;
+      }
+      const box = talk.getBoundingClientRect();
+      close.style.top = `${box.top}px`;
+      close.style.left = `${box.left}px`;
+      close.style.width = `${box.width}px`;
+      close.style.height = `${box.height}px`;
+      close.style.right = "auto";
+    };
+    place();
+    addEventListener("resize", place);
+    return () => removeEventListener("resize", place);
+  }, [mode]);
   useEffect(() => {
     if (mode !== "open") return;
     closeButton.current?.focus({ preventScroll: true });

@@ -26,7 +26,7 @@ import { createScreenPortal } from "@/lib/screen-portal";
 import { zoomRect } from "@/lib/device-zoom";
 import { createScreenBrowser, type ScreenBrowser } from "@/lib/screen-browser";
 import { onShowcasePlayer } from "@/lib/screen-video-player";
-import { watchPointerHover } from "@/lib/showcase-events";
+import { watchPointerActivity } from "@/lib/showcase-events";
 import { SHOWCASE_INTERVAL_MS } from "@/lib/showcase-timing";
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 
@@ -42,10 +42,16 @@ export type DeviceScene = {
   dispose: () => void;
 };
 
-// The laptop turns about its vertical axis: front-on, then to one side and back,
-// alternating sides as each website opens. About 35 degrees reads clearly while
-// keeping the live site legible; raise it for a more dramatic side-on view.
+// The laptop sways about its vertical axis without ever stopping: front-on as
+// each website's tab opens, then to one side, back through front-on, to the
+// other side and home. About 35 degrees reads clearly while keeping the live
+// site legible; raise it for a more dramatic side-on view.
 const LAPTOP_SWAY_YAW = 0.62;
+// Full left-and-right cycles per website (the tab interval). More is faster.
+const LAPTOP_SWAY_CYCLES = 2;
+// The sway holds still while someone interacts with the device and starts
+// again once nothing has touched it for this long.
+const SWAY_IDLE_RESUME_MS = 2500;
 const LAPTOP_TILT = -0.03;
 // Resting camera distance from the scene (was 6.8). Lower is closer.
 const CAMERA_DISTANCE = 6.2;
@@ -61,13 +67,9 @@ const SCREEN_FACING_MIN = 0.05;
 // Tilted back further than this, the deck can rise in front of the screen's lower part.
 const DECK_COVER_PITCH = -0.42;
 
-const smoothstep = (from: number, to: number, value: number) => {
-  const t = Math.min(1, Math.max(0, (value - from) / (to - from)));
-  return t * t * (3 - 2 * t);
-};
-/** 0 → 1 → 0 across one website's turn: rests front-on while its tab opens, turns away, returns. */
-const swing = (phase: number) =>
-  smoothstep(0.18, 0.48, phase) - smoothstep(0.58, 0.9, phase);
+/** The laptop's turn, -1 → 1: front-on at 0 (as a tab opens), then side to side, never resting. */
+const swing = (elapsedMs: number) =>
+  Math.sin((elapsedMs / SHOWCASE_INTERVAL_MS) * LAPTOP_SWAY_CYCLES * Math.PI * 2);
 
 function createCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
@@ -323,7 +325,6 @@ export async function createDeviceScene(
       laptopBrowser.setLive(open && !mobile);
       phoneBrowser.setLive(open && mobile);
     };
-    let projectIndex = 0;
     let previousTime = 0;
     let transition:
       | {
@@ -527,14 +528,13 @@ export async function createDeviceScene(
         activeGroup.position.y +=
           Math.sin(clock * 0.8 + 1) * 0.14 * drift * (1 - pausedHold);
       } else {
-        // Laptop: one deliberate turn per website, in step with the tab changes.
-        // Wall-clock phase, like the tab timer, so a slow frame rate never
-        // lets the turn drift out of step with the tab changes.
-        const phase = Math.min(1, (performance.now() - projectStart) / SHOWCASE_INTERVAL_MS);
-        const side = projectIndex % 2 === 0 ? 1 : -1;
+        // Laptop: a steady side-to-side sway that starts front-on at each tab
+        // change. Wall-clock time, like the tab timer, so a slow frame rate
+        // never lets the sway drift out of step with the tab changes.
+        const elapsed = performance.now() - projectStart;
         laptopGroup.rotation.set(
           LAPTOP_TILT + dragPitch,
-          side * LAPTOP_SWAY_YAW * (moving ? swing(phase) : 0) * drift * (1 - still) +
+          LAPTOP_SWAY_YAW * (moving ? swing(elapsed) : 0) * drift * (1 - still) +
             dragYaw,
           0,
         );
@@ -589,12 +589,14 @@ export async function createDeviceScene(
       if (!frame && !disposed) frame = requestAnimationFrame(draw);
     }
     // The tab timer restarts when the player closes, so restart the turn with it.
-    // The device holds still, facing front, while the video player is open or
-    // a mouse is over the stage.
+    // The sway holds still while the video player is open or someone is
+    // interacting with the device, and restarts front-on once it has been
+    // left alone for SWAY_IDLE_RESUME_MS.
     let playerOpen = false;
-    let hovering = false;
+    let interacting = false;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
     const syncPause = () => {
-      const paused = playerOpen || hovering;
+      const paused = playerOpen || interacting;
       if (paused === swayPaused) return;
       swayPaused = paused;
       if (!paused) projectStart = performance.now();
@@ -604,13 +606,21 @@ export async function createDeviceScene(
       playerOpen = open;
       syncPause();
     });
-    const stopHover = watchPointerHover(host, (over) => {
-      hovering = over;
-      syncPause();
+    const stopActivity = watchPointerActivity(host, () => {
+      if (!interacting) {
+        interacting = true;
+        syncPause();
+      }
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        interacting = false;
+        syncPause();
+      }, SWAY_IDLE_RESUME_MS);
     });
     stopPlayerWatch = () => {
       stopPlayer();
-      stopHover();
+      stopActivity();
+      clearTimeout(idleTimer);
     };
     function resize() {
       const width = host.clientWidth;
@@ -741,7 +751,6 @@ export async function createDeviceScene(
         laptopBrowser.setActive(index, animate && index !== current);
         phoneBrowser.setActive(index, animate && index !== current);
         projectStart = performance.now();
-        projectIndex = index;
         if (!animate || index === current) {
           current = index;
           transition = undefined;

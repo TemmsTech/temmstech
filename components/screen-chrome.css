@@ -1,0 +1,321 @@
+/* The static Chrome window on the Windows desktop (lib/screen-chrome.ts).
+   Same 1280px layout units as .screen-browser. Only transforms and opacity
+   animate. Colours are sampled from a dark Chrome screenshot; sizes are that
+   screenshot at 1917px scaled by two thirds. */
+
+.screen-chrome {
+  position: absolute;
+  inset: 0 0 var(--desk-bottom, 48px) 0;
+  z-index: 3;
+  /* The root only holds the window; presses fall through to the desktop. */
+  pointer-events: none;
+}
+.ch-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #3c3c3c;
+  color: #e3e3e3;
+  font: 10.5px/1.3 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  pointer-events: auto;
+  transform-origin: 50% 50%;
+  transform: translate(0, 0) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+.screen-chrome[data-window="windowed"] .ch-window {
+  transform: scale(0.78);
+  border-radius: 12px;
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(255 255 255 / 0.12);
+}
+.screen-chrome:is([data-window="minimised"], [data-window="closed"]) .ch-window {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+.ch-window,
+.ch-window * {
+  cursor: default;
+  user-select: none;
+}
+
+/* ---- Tab strip and window buttons ------------------------------------------ */
+.ch-tabs {
+  display: flex;
+  height: 33px;
+  flex: none;
+  align-items: flex-end;
+  padding-left: 4px;
+  background: #2b2b2b;
+}
+.ch-tablist,
+.ch-tab-add {
+  display: grid;
+  width: 26px;
+  height: 27px;
+  flex: none;
+  color: #c4c7c5;
+  place-items: center;
+}
+.ch-tablist {
+  align-self: center;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+.ch-tab {
+  display: flex;
+  width: 190px;
+  height: 27px;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: #c4c7c5;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ch-tab:hover:not([data-active]) {
+  background: #353535;
+}
+.ch-tab[data-active] {
+  background: #3c3c3c;
+  color: #fff;
+}
+.ch-fav {
+  display: grid;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  place-items: center;
+}
+.ch-tab-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-tab i {
+  color: #c4c7c5;
+  font-size: 13px;
+  font-style: normal;
+}
+.ch-gemini {
+  display: flex;
+  height: 23px;
+  flex: none;
+  align-items: center;
+  align-self: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 0 9px;
+  border-radius: 12px;
+  background: #3c3c3c;
+  color: #fff;
+}
+.ch-gemini b {
+  font-weight: 600;
+}
+.ch-controls {
+  display: flex;
+  align-self: stretch;
+  margin-left: 12px;
+}
+.ch-control {
+  display: grid;
+  width: 38px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cfcfcf;
+  font: inherit;
+  cursor: default;
+  place-items: center;
+}
+.ch-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.ch-control[data-control="close"]:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ---- Toolbar ------------------------------------------------------------------ */
+.ch-bar {
+  display: flex;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px 0 5px;
+  background: #3c3c3c;
+  box-sizing: border-box;
+}
+.ch-nav,
+.ch-star {
+  display: flex;
+  align-items: center;
+}
+.ch-tool {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: none;
+  color: #e3e3e3;
+  place-items: center;
+}
+.ch-tool[data-dim] {
+  color: #8a8c8b;
+}
+.ch-url {
+  display: flex;
+  height: 28px;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  margin: 0 6px;
+  padding: 0 8px 0 3px;
+  border-radius: 14px;
+  background: #282828;
+  color: #e3e3e3;
+}
+.ch-lead {
+  display: flex;
+  flex: none;
+}
+.ch-chip {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 6px;
+  border-radius: 11px;
+  background: #3c3c3c;
+  font-weight: 600;
+}
+.ch-tune {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+}
+.ch-url-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-star {
+  flex: none;
+  color: #c4c7c5;
+}
+.ch-divider {
+  width: 1px;
+  height: 16px;
+  flex: none;
+  margin: 0 5px;
+  background: #5a5a5a;
+}
+.ch-profile {
+  display: flex;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px 0 4px;
+  border-radius: 13px;
+  background: #004a77;
+  color: #c2e7ff;
+}
+.ch-profile b {
+  font-weight: 600;
+}
+.ch-avatar {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #7fcfff;
+  color: #00344f;
+  font-size: 10px;
+  font-weight: 700;
+  place-items: center;
+}
+
+/* ---- Bookmarks bar ------------------------------------------------------------ */
+.ch-marks {
+  display: flex;
+  height: 30px;
+  flex: none;
+  align-items: center;
+  padding: 0 8px 0 5px;
+  background: #3c3c3c;
+  box-sizing: border-box;
+}
+.ch-marks-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 6px;
+  color: #e3e3e3;
+}
+.ch-marks-all b {
+  font-weight: 400;
+}
+
+/* ---- Pages: a picture each ---------------------------------------------------- */
+.ch-page {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  background: #1b1b1b;
+}
+.ch-pane {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+}
+.ch-pane[data-on] {
+  display: block;
+}
+.ch-pane[data-pane="claude"] {
+  background: #191919;
+}
+.ch-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.ch-pane[data-fit="cover"] .ch-shot {
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+}

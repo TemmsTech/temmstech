@@ -1,4 +1,5 @@
 import { TabletTransition } from "@/components/tablet-transition";
+import { OpenZoom } from "@/components/open-zoom";
 import { Hero } from "@/modules/hero";
 import { Services } from "@/modules/services";
 import { Portfolio } from "@/modules/portfolio";
@@ -54,6 +55,7 @@ export function Home() {
         intro={contactIntro}
         points={contactPoints}
       />
+      <OpenZoom />
     </>
   );
 }

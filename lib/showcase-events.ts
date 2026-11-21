@@ -33,6 +33,20 @@ export function watchPointerHover(
   };
 }
 
+/**
+ * Calls back each time someone interacts with the host: a mouse, pen or finger
+ * moves over it or presses it, the wheel turns over it, or a key is pressed
+ * inside it. A pointer that simply rests there fires nothing.
+ */
+export function watchPointerActivity(host: HTMLElement, listener: () => void) {
+  const events = ["pointermove", "pointerdown", "wheel", "keydown"] as const;
+  for (const name of events)
+    host.addEventListener(name, listener, { passive: true });
+  return () => {
+    for (const name of events) host.removeEventListener(name, listener);
+  };
+}
+
 /** Fired on the device host while the screen's browser window is minimised or closed. */
 export const SHOWCASE_WINDOW_EVENT = "showcase-window";
 

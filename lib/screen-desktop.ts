@@ -1,4 +1,7 @@
 import type { BrowserKind } from "@/lib/screen-browser";
+import { VLC_CONE_SVG } from "@/lib/screen-vlc-icon";
+import { CHATGPT_ICON, claudeLogo } from "@/lib/screen-app-icons";
+import { onScratch } from "@/lib/scratch";
 
 export type DesktopStyle = "windows" | "mac";
 /** "auto" follows the visitor's operating system. */
@@ -49,6 +52,15 @@ const DESKTOP_ICONS = [
   "GitHub Desktop", "HandBrake", "Makinde - Chrome", "Google Drive", "Google Docs",
   "Google Sheets", "Google Slides", "3D Prototypes", "Loom", "Granola", "Adobe Express",
 ] as const;
+// SCRATCH ONLY. These desktop icons are hidden just for /scratch while the
+// cleanup is being tried. The sprite positions of the rest do not move.
+// To release it: make trimmedDesktop() return true (or delete the check and
+// filter), then delete app/scratch.
+const TRIMMED_ICONS: ReadonlySet<string> = new Set([
+  "UltraISO", "PowerISO", "Foxit PDF Reader", "HandBrake", "Makinde - Chrome",
+  "Google Docs", "Google Sheets", "Google Slides", "3D Prototypes", "Adobe Express",
+]);
+const trimmedDesktop = onScratch;
 /** Cells of the taskbar sprite (public/images/desktop/taskbar-icons.png). */
 const BAR = {
   start: 0, taskview: 1, edge: 2, explorer: 3, outlook: 4, store: 5, teams: 6,
@@ -128,12 +140,21 @@ export type ScreenDesktop = {
   braveButton: HTMLElement;
   /** The Granola taskbar button (Windows desktop only). */
   granolaButton: HTMLElement;
+  /** The Recycle Bin taskbar button: only on show while the window is open or minimised (Windows desktop only). */
+  binButton: HTMLElement;
   setCode: (code: DesktopApp) => void;
   setExplorer: (explorer: DesktopApp) => void;
   setTerminal: (terminal: DesktopApp) => void;
   setWhatsApp: (whatsapp: DesktopApp) => void;
   setBrave: (brave: DesktopApp) => void;
   setGranola: (granola: DesktopApp) => void;
+  setBin: (bin: DesktopApp) => void;
+  /** The VLC taskbar button (Windows desktop only). */
+  vlcButton: HTMLElement;
+  setVlc: (vlc: DesktopApp) => void;
+  /** The Chrome taskbar button: only on show while the window is open or minimised (Windows desktop only). */
+  chromeButton: HTMLElement;
+  setChrome: (chrome: DesktopApp) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -142,7 +163,7 @@ export type ScreenDesktop = {
 type DesktopHandlers = {
   /** The taskbar or dock button was pressed. */
   onApp: () => void;
-  /** The Temms Tech desktop icon was double-clicked. */
+  /** The Temms Tech or Microsoft Edge desktop icon was double-clicked. */
   onOpen: () => void;
   /** The video button was pressed. */
   onVideo: () => void;
@@ -164,6 +185,18 @@ type DesktopHandlers = {
   onGranola: () => void;
   /** The Granola desktop icon was double-clicked. */
   onOpenGranola: () => void;
+  /** The Recycle Bin taskbar button was pressed. */
+  onBin: () => void;
+  /** The Recycle Bin desktop icon was double-clicked. */
+  onOpenBin: () => void;
+  /** The VLC taskbar button was pressed. */
+  onVlc?: () => void;
+  /** The VLC media player desktop icon was double-clicked. */
+  onOpenVlc?: () => void;
+  /** The Chrome taskbar button was pressed. */
+  onChrome?: () => void;
+  /** The Google Chrome desktop icon was double-clicked. */
+  onOpenChrome?: () => void;
 };
 
 /**
@@ -188,6 +221,12 @@ export function createScreenDesktop(
     onOpenBrave,
     onGranola,
     onOpenGranola,
+    onBin,
+    onOpenBin,
+    onVlc,
+    onOpenVlc,
+    onChrome,
+    onOpenChrome,
   }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
@@ -211,6 +250,11 @@ export function createScreenDesktop(
   let codeIcon: HTMLButtonElement | undefined;
   let braveIcon: HTMLButtonElement | undefined;
   let granolaIcon: HTMLButtonElement | undefined;
+  let binIcon: HTMLButtonElement | undefined;
+  let vlcIcon: HTMLButtonElement | undefined;
+  let chromeIcon: HTMLButtonElement | undefined;
+  let chromeCell = 0;
+  let edgeIcon: HTMLButtonElement | undefined;
   if (!mac) {
     // Laid out like the real desktop: columns of eight, filled top to bottom,
     // with Temms Tech and Visual Studio Code after the last of them.
@@ -219,12 +263,36 @@ export function createScreenDesktop(
       holder("screen-desktop-glyph", sprite("bar", BAR.code)),
       "Visual Studio Code",
     );
+    // The Claude icon is drawn (the proper logo); a ChatGPT icon follows it.
     const desktopIcons = DESKTOP_ICONS.map((name, index) =>
-      iconButton(name, holder("screen-desktop-glyph", sprite("desk", index)), name),
+      iconButton(
+        name,
+        holder(
+          "screen-desktop-glyph",
+          name === "Claude" ? claudeLogo(undefined, 3) : sprite("desk", index),
+        ),
+        name,
+      ),
     );
+    const chatgptIcon = iconButton(
+      "ChatGPT",
+      holder("screen-desktop-glyph", CHATGPT_ICON),
+      "ChatGPT",
+    );
+    chromeCell = DESKTOP_ICONS.indexOf("Google Chrome");
+    chromeIcon = desktopIcons[chromeCell];
     braveIcon = desktopIcons[DESKTOP_ICONS.indexOf("Brave")];
     granolaIcon = desktopIcons[DESKTOP_ICONS.indexOf("Granola")];
-    icons.splice(0, 1, ...desktopIcons, appIcon, codeIcon);
+    binIcon = desktopIcons[DESKTOP_ICONS.indexOf("Recycle Bin")];
+    vlcIcon = desktopIcons[DESKTOP_ICONS.indexOf("VLC media player")];
+    // Microsoft Edge opens the same browser window as Temms Tech and the Edge taskbar button.
+    edgeIcon = desktopIcons[DESKTOP_ICONS.indexOf("Microsoft Edge")];
+    const kept = trimmedDesktop()
+      ? desktopIcons.filter((_, index) => !TRIMMED_ICONS.has(DESKTOP_ICONS[index]))
+      : desktopIcons;
+    const afterClaude = kept.indexOf(desktopIcons[DESKTOP_ICONS.indexOf("Claude")]) + 1;
+    const shown = [...kept.slice(0, afterClaude), chatgptIcon, ...kept.slice(afterClaude)];
+    icons.splice(0, 1, ...shown, appIcon, codeIcon);
   }
   const iconColumn = create("div", "screen-desktop-icons");
   iconColumn.append(...icons);
@@ -266,6 +334,7 @@ export function createScreenDesktop(
     onTerminal,
   );
   terminalButton.dataset.state = "closed";
+  terminalButton.hidden = true; // not pinned: only shown while running
   terminalButton.setAttribute("aria-label", "Open Terminal");
   const whatsappButton = taskbarButton(
     "screen-desktop-whatsapp",
@@ -273,13 +342,33 @@ export function createScreenDesktop(
     onWhatsApp,
   );
   whatsappButton.dataset.state = "closed";
+  whatsappButton.hidden = true; // not pinned: only shown while running
   whatsappButton.setAttribute("aria-label", "Open WhatsApp");
   const braveButton = taskbarButton("screen-desktop-brave", sprite("bar", BAR.brave), onBrave);
   braveButton.dataset.state = "closed";
+  braveButton.hidden = true; // not pinned: only shown while running
   braveButton.setAttribute("aria-label", "Open Brave");
   const granolaButton = taskbarButton("screen-desktop-granola", sprite("bar", BAR.granola), onGranola);
   granolaButton.dataset.state = "closed";
+  granolaButton.hidden = true; // not pinned: only shown while running
   granolaButton.setAttribute("aria-label", "Open Granola");
+  // VLC is not pinned (the cone): its button shows only while the window is open or minimised.
+  const vlcButton = taskbarButton("screen-desktop-vlc", VLC_CONE_SVG, () => onVlc?.());
+  vlcButton.dataset.state = "closed";
+  vlcButton.hidden = true; // not pinned: only shown while running
+  vlcButton.setAttribute("aria-label", "Open VLC media player");
+  // The Recycle Bin is not pinned: its button shows only while the window is open or minimised.
+  // It borrows the desktop icon's picture (the first cell of the desktop sprite).
+  const binButton = taskbarButton("screen-desktop-bin", sprite("desk", 0), onBin);
+  binButton.hidden = true;
+  binButton.dataset.state = "closed";
+  binButton.setAttribute("aria-label", "Open Recycle Bin");
+  // Chrome is not pinned either: its button shows only while the window is open or minimised,
+  // and borrows the desktop icon's picture.
+  const chromeButton = taskbarButton("screen-desktop-chrome", sprite("desk", chromeCell), () => onChrome?.());
+  chromeButton.hidden = true;
+  chromeButton.dataset.state = "closed";
+  chromeButton.setAttribute("aria-label", "Open Google Chrome");
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -357,6 +446,9 @@ export function createScreenDesktop(
       granolaButton,
       item(BAR.chat),
       whatsappButton,
+      vlcButton,
+      binButton,
+      chromeButton,
       videoButton,
     );
     const trayBox = create("div", "screen-tray");
@@ -382,10 +474,13 @@ export function createScreenDesktop(
       lastIcon = icon;
       lastAt = again ? 0 : now;
       select(icon);
-      if (again && icon === appIcon) onOpen();
+      if (again && (icon === appIcon || icon === edgeIcon)) onOpen();
       if (again && icon === codeIcon) onOpenCode();
       if (again && icon === braveIcon) onOpenBrave();
       if (again && icon === granolaIcon) onOpenGranola();
+      if (again && icon === binIcon) onOpenBin();
+      if (again && icon === vlcIcon) onOpenVlc?.();
+      if (again && icon === chromeIcon) onOpenChrome?.();
     });
   }
   // A press anywhere else on the device clears the selection (presses on the
@@ -403,7 +498,38 @@ export function createScreenDesktop(
     whatsappButton,
     braveButton,
     granolaButton,
+    binButton,
+    vlcButton,
+    chromeButton,
+    setChrome(chrome) {
+      chromeButton.hidden = chrome === "closed";
+      chromeButton.dataset.state = chrome;
+      chromeButton.setAttribute(
+        "aria-label",
+        chrome === "open" ? "Minimise Google Chrome" : "Open Google Chrome",
+      );
+      if (chrome !== "open") select();
+    },
+    setVlc(vlc) {
+      vlcButton.hidden = vlc === "closed";
+      vlcButton.dataset.state = vlc;
+      vlcButton.setAttribute(
+        "aria-label",
+        vlc === "open" ? "Minimise VLC media player" : "Open VLC media player",
+      );
+      if (vlc !== "open") select();
+    },
+    setBin(bin) {
+      binButton.hidden = bin === "closed";
+      binButton.dataset.state = bin;
+      binButton.setAttribute(
+        "aria-label",
+        bin === "open" ? "Minimise Recycle Bin" : "Open Recycle Bin",
+      );
+      if (bin !== "open") select();
+    },
     setGranola(granola) {
+      granolaButton.hidden = granola === "closed";
       granolaButton.dataset.state = granola;
       granolaButton.setAttribute(
         "aria-label",
@@ -412,11 +538,13 @@ export function createScreenDesktop(
       if (granola !== "open") select();
     },
     setBrave(brave) {
+      braveButton.hidden = brave === "closed";
       braveButton.dataset.state = brave;
       braveButton.setAttribute("aria-label", brave === "open" ? "Minimise Brave" : "Open Brave");
       if (brave !== "open") select();
     },
     setWhatsApp(whatsapp) {
+      whatsappButton.hidden = whatsapp === "closed";
       whatsappButton.dataset.state = whatsapp;
       whatsappButton.setAttribute(
         "aria-label",
@@ -425,6 +553,7 @@ export function createScreenDesktop(
       if (whatsapp !== "open") select();
     },
     setTerminal(terminal) {
+      terminalButton.hidden = terminal === "closed";
       terminalButton.dataset.state = terminal;
       terminalButton.setAttribute(
         "aria-label",

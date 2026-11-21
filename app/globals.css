@@ -627,7 +627,8 @@
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: rgb(3 10 22 / 0.82);
+  /* Near-black, a little lighter behind the laptop so it is the one thing in focus. */
+  background: radial-gradient(ellipse 65% 60% at 50% 52%, rgb(2 7 16 / 0.93), rgb(0 2 6 / 0.98));
   animation: device-backdrop-in var(--zoom-ms) var(--ease-out) both;
 }
 .device-backdrop[data-state="closing"] {
@@ -656,6 +657,7 @@
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0 1rem;
   border: 1px solid rgb(255 255 255 / 0.28);
@@ -664,11 +666,12 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #fff;
-  background: rgb(255 255 255 / 0.1);
+  /* Solid, so the Let’s talk button underneath never shows through. */
+  background: #16202f;
   cursor: pointer;
 }
 .device-close:hover {
-  background: rgb(255 255 255 / 0.2);
+  background: #212f45;
 }
 .device-stage [data-dragging] {
   cursor: grabbing;

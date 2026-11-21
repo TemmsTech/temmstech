@@ -1,3 +1,4 @@
+import { claudeLogo } from "@/lib/screen-app-icons";
 import { WINDOW_ICONS } from "@/lib/window-controls";
 
 /** What the Brave window is doing, as far as the desktop is concerned. */
@@ -30,8 +31,7 @@ const ICONS = {
 
 const FAVICONS = {
   temmstech: '<img src="/images/brand/logo-mark.png" alt="" draggable="false" />',
-  claude:
-    '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" stroke="#d97757" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  claude: claudeLogo(14),
   chatgpt:
     '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2.8l7.2 4.1v8.2L12 19.2l-7.2-4.1V6.9z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 7.5l4 2.3v4.4L12 16.5l-4-2.3V9.8z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>',
 } as const;

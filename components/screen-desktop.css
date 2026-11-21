@@ -691,3 +691,308 @@
   right: 14px;
   font-size: 12px;
 }
+
+/* ---- VLC media player window ----------------------------------------------
+   The same video player (lib/screen-video-player.ts) wearing a VLC frame:
+   cone + title bar, menu row, black stage, seek bar, control row.
+   Only the .screen-player--vlc window is styled here; the intro player keeps
+   its Apple-style capsule. Only transforms and opacity animate. */
+.screen-player--vlc {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f0f0f0;
+  color: #1b1b1b;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  border-radius: 8px 8px 0 0;
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(0 0 0 / 0.45);
+}
+
+/* Title bar: cone, "file - VLC media player", then the three window buttons. */
+.vlc-titlebar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+}
+.vlc-cone {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 8px 0 10px;
+  flex: none;
+}
+.vlc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #1b1b1b;
+}
+.vlc-wincontrols {
+  display: flex;
+  height: 100%;
+  flex: none;
+}
+.vlc-win {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1b1b1b;
+  cursor: default;
+}
+.vlc-win svg {
+  width: 12px;
+  height: 12px;
+}
+.vlc-win:hover:not(:disabled) {
+  background: #e6e6e6;
+}
+.vlc-win[data-action="close"]:hover:not(:disabled) {
+  background: #e81123;
+  color: #fff;
+}
+
+/* Menu row. */
+.vlc-menu {
+  display: flex;
+  flex: none;
+  height: 24px;
+  align-items: center;
+  padding: 0 4px;
+  background: #ffffff;
+  border-bottom: 1px solid #e3e3e3;
+}
+.vlc-menu-item {
+  padding: 3px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: default;
+}
+.vlc-menu-item:hover {
+  background: #e5f1fb;
+}
+
+/* The black stage around the <video>. Black while stopped, like VLC. */
+.vlc-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+}
+.vlc-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.screen-player--vlc[data-stopped="true"] .vlc-video {
+  visibility: hidden;
+}
+
+/* Seek bar with elapsed and total time either side. */
+.vlc-bottom {
+  flex: none;
+  padding: 6px 10px 8px;
+  background: #f0f0f0;
+}
+.vlc-seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vlc-time {
+  min-width: 42px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #3a3a3a;
+}
+.vlc-time:last-child {
+  text-align: right;
+}
+.vlc-track {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+.vlc-rail {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #cfcfcf;
+}
+.vlc-fill {
+  width: 100%;
+  height: 100%;
+  background: #ff8800;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.vlc-thumb {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #ff8800;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+
+/* Control row. */
+.vlc-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.vlc-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #2b2b2b;
+  cursor: default;
+}
+.vlc-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.vlc-btn:hover {
+  background: #e1e1e1;
+}
+.vlc-btn[data-active="true"] {
+  color: #ff8800;
+}
+.vlc-play {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ff8800;
+  color: #fff;
+}
+.vlc-play:hover {
+  background: #ff9a26;
+}
+.vlc-play .icon-pause,
+.vlc-play[data-playing="true"] .icon-play {
+  display: none;
+}
+.vlc-play[data-playing="true"] .icon-pause {
+  display: block;
+}
+.vlc-play span {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.vlc-gap {
+  width: 10px;
+  flex: none;
+}
+.vlc-spacer {
+  flex: 1;
+}
+.vlc-mute .icon-off,
+.vlc-mute[data-muted="true"] .icon-on {
+  display: none;
+}
+.vlc-mute[data-muted="true"] .icon-off {
+  display: block;
+}
+.vlc-mute span {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Volume: a wedge with the level written above it (100% when it opens). */
+.vlc-volume-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vlc-volume-label {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  font-size: 10px;
+  color: #5a5a5a;
+}
+.vlc-volume {
+  position: relative;
+  width: 100px;
+  height: 20px;
+  cursor: pointer;
+  touch-action: none;
+}
+.vlc-volume-wedge {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #cfcfcf;
+  clip-path: polygon(0 100%, 100% 100%, 100% 0);
+}
+.vlc-volume-fill {
+  height: 100%;
+  background: #ff8800;
+}
+
+/* Fullscreen fills this window: title bar, menu and controls go; the controls
+   come back while the pointer is over the window. */
+.screen-player--vlc[data-fullscreen="true"] .vlc-titlebar,
+.screen-player--vlc[data-fullscreen="true"] .vlc-menu {
+  display: none;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgb(20 20 20 / 0.85);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.screen-player--vlc[data-fullscreen="true"]:hover .vlc-bottom {
+  opacity: 1;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-time {
+  color: #e8e8e8;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-btn:not(.vlc-play) {
+  color: #f1f1f1;
+}
+
+/* Small corner window: keep it readable by hiding the extra buttons. */
+.screen-player-layer[data-state="mini"] .screen-player--vlc .vlc-extra {
+  display: none;
+}
+
+/* The cone on the taskbar button. */
+.screen-taskbar .screen-desktop-vlc .screen-desktop-app-icon {
+  width: 24px;
+  height: 24px;
+}

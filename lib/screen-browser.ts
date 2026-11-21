@@ -5,8 +5,10 @@ import {
 } from "@/lib/screen-desktop";
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
 import { createScreenBrave } from "@/lib/screen-brave";
+import { createScreenChrome } from "@/lib/screen-chrome";
 import { createScreenExplorer } from "@/lib/screen-explorer";
 import { createScreenGranola } from "@/lib/screen-granola";
+import { createScreenRecycleBin } from "@/lib/screen-recycle-bin";
 import { createScreenTerminal } from "@/lib/screen-terminal";
 import { createScreenWhatsApp } from "@/lib/screen-whatsapp";
 import { createScreenVideoPlayer } from "@/lib/screen-video-player";
@@ -16,9 +18,12 @@ import {
   dispatchShowcaseWindow,
 } from "@/lib/showcase-events";
 import { WINDOW_ICONS } from "@/lib/window-controls";
+import { showcaseVideo } from "@/data/device-showcase";
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 
 const TYPING_STEP_MS = 22;
+// The VLC media player window is on for every visitor.
+const vlcEnabled = () => true;
 // How long a simulated reload covers the page; the progress bar runs 900ms.
 const RELOAD_MS = 900;
 const CONTROL_LABELS = {
@@ -240,7 +245,9 @@ export function createScreenBrowser(
     : createScreenDesktop(host, desktopStyle, {
         onApp: () => pressTaskbar(),
         onOpen: () => {
+          // Hidden: bring it back. Already open but under another window: bring it forward.
           if (windowHidden()) reopen();
+          else raise("browser");
         },
         onVideo: () => player?.restore(),
         onCode: () => code?.toggle(),
@@ -252,6 +259,18 @@ export function createScreenBrowser(
         onOpenBrave: () => brave?.open(),
         onGranola: () => granola?.toggle(),
         onOpenGranola: () => granola?.open(),
+        onBin: () => bin?.toggle(),
+        onOpenBin: () => bin?.open(),
+        // VLC: the taskbar button opens it or sends it away; a double-click on the icon opens it.
+        onVlc: () => {
+          if (vlcState === "open" || vlcState === "mini") vlc?.minimise();
+          else vlc?.restore();
+        },
+        onOpenVlc: () => {
+          if (vlcState !== "open" && vlcState !== "mini") vlc?.restore();
+        },
+        onChrome: () => chromeApp?.toggle(),
+        onOpenChrome: () => chromeApp?.open(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -259,7 +278,7 @@ export function createScreenBrowser(
     root.dataset.top = "browser";
     root.insertBefore(desk.element, win);
   }
-  // Static VS Code, File Explorer, Terminal, WhatsApp, Brave and Granola windows, on the Windows desktop only.
+  // Static VS Code, File Explorer, Terminal, WhatsApp, Brave, Granola, Recycle Bin and Chrome windows, on the Windows desktop only.
   // Whichever window was opened last sits on top (see raise).
   const code =
     desk && desktopStyle === "windows"
@@ -312,6 +331,16 @@ export function createScreenBrowser(
           },
         })
       : undefined;
+  const chromeApp =
+    desk && desktopStyle === "windows"
+      ? createScreenChrome(root, {
+          target: () => centreOf(desk.chromeButton, root),
+          onChange: (state) => {
+            desk.setChrome(state);
+            if (state === "open") raise("chrome");
+          },
+        })
+      : undefined;
   const granola =
     desk && desktopStyle === "windows"
       ? createScreenGranola(root, {
@@ -322,10 +351,47 @@ export function createScreenBrowser(
           },
         })
       : undefined;
+  const bin =
+    desk && desktopStyle === "windows"
+      ? createScreenRecycleBin(root, {
+          target: () => centreOf(desk.binButton, root),
+          onChange: (state) => {
+            desk.setBin(state);
+            if (state === "open") raise("bin");
+          },
+        })
+      : undefined;
+
+  // VLC media player (Windows desktop only): the same video player as above,
+  // wearing a VLC frame. It plays showcaseVideo, waits for its icon or taskbar
+  // button, and shrinks into that button when minimised or closed.
+  let vlcState: "idle" | "open" | "mini" | "docked" | "closed" = "closed";
+  const vlc =
+    vlcEnabled() && desk && desktopStyle === "windows"
+      ? createScreenVideoPlayer(
+          root,
+          host,
+          showcaseVideo,
+          {
+            target: () => centreOf(desk.vlcButton, root),
+            onChange: (state) => {
+              vlcState = state;
+              desk.setVlc(
+                state === "open" || state === "mini"
+                  ? "open"
+                  : state === "docked"
+                    ? "minimised"
+                    : "closed",
+              );
+            },
+          },
+          { skin: "vlc" },
+        )
+      : undefined;
 
   // The windows' stacking order, lowest first; z-index 1.. follows it, below
   // the video layer. Opening or restoring a window moves it to the end.
-  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola";
+  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola" | "bin" | "chrome";
   const stack: AppName[] = ["browser"];
   function raise(name: AppName) {
     const at = stack.indexOf(name);
@@ -340,6 +406,8 @@ export function createScreenBrowser(
       whatsapp: whatsapp?.element,
       brave: brave?.element,
       granola: granola?.element,
+      bin: bin?.element,
+      chrome: chromeApp?.element,
     };
     stack.forEach((app, index) => {
       const layer = layers[app];
@@ -590,6 +658,7 @@ export function createScreenBrowser(
       if (enabled === live) return;
       live = enabled;
       player?.setLive(enabled);
+      vlc?.setLive(enabled);
       code?.setLive(enabled);
       terminal?.setLive(enabled);
       granola?.setLive(enabled);
@@ -610,7 +679,10 @@ export function createScreenBrowser(
       whatsapp?.dispose();
       brave?.dispose();
       granola?.dispose();
+      bin?.dispose();
+      chromeApp?.dispose();
       player?.dispose();
+      vlc?.dispose();
       frames.clear();
       root.remove();
     },
