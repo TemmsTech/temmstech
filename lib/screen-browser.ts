@@ -11,6 +11,9 @@ import { createScreenClaude } from "@/lib/screen-claude";
 import { createScreenExplorer } from "@/lib/screen-explorer";
 import { createScreenGranola } from "@/lib/screen-granola";
 import { createScreenRecycleBin } from "@/lib/screen-recycle-bin";
+import { createScreenPower } from "@/lib/screen-power";
+import { createScreenStart } from "@/lib/screen-start";
+import { PROFILE_NAME } from "@/data/start-menu";
 import { createScreenTerminal } from "@/lib/screen-terminal";
 import { createScreenWhatsApp } from "@/lib/screen-whatsapp";
 import { createScreenVideoPlayer } from "@/lib/screen-video-player";
@@ -277,6 +280,7 @@ export function createScreenBrowser(
         onOpenClaude: () => claudeApp?.open(),
         onChatgpt: () => chatgptApp?.toggle(),
         onOpenChatgpt: () => chatgptApp?.open(),
+        onStart: () => start?.toggle(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -442,6 +446,40 @@ export function createScreenBrowser(
       if (layer) layer.style.zIndex = String(index + 1);
     });
   }
+  // The Start menu (Windows desktop). It sits above every window and opens the ones this desktop has.
+  // Lock, sleep, shut down and restart, from the Start menu's power button.
+  const power =
+    desk && desktopStyle === "windows"
+      ? createScreenPower(root, { name: PROFILE_NAME })
+      : undefined;
+  const start =
+    desk && desktopStyle === "windows"
+      ? createScreenStart(root, {
+          host,
+          button: () => desk.startButton,
+          onChange: (open) => desk.setStart(open),
+          onPower: power ? (action) => power.run(action) : undefined,
+          launch: (app) => {
+            const opens: Record<typeof app, () => void> = {
+              edge: () => (windowHidden() ? reopen() : raise("browser")),
+              chrome: () => chromeApp?.open(),
+              brave: () => brave?.open(),
+              code: () => code?.open(),
+              explorer: () => explorer?.open(),
+              terminal: () => terminal?.open(),
+              granola: () => granola?.open(),
+              claude: () => claudeApp?.open(),
+              chatgpt: () => chatgptApp?.open(),
+              whatsapp: () => whatsapp?.open(),
+              bin: () => bin?.open(),
+              vlc: () => {
+                if (vlcState !== "open" && vlcState !== "mini") vlc?.restore();
+              },
+            };
+            opens[app]();
+          },
+        })
+      : undefined;
   host.appendChild(root);
 
   function rippleAt(x: number, y: number) {
@@ -711,6 +749,8 @@ export function createScreenBrowser(
       chromeApp?.dispose();
       claudeApp?.dispose();
       chatgptApp?.dispose();
+      start?.dispose();
+      power?.dispose();
       player?.dispose();
       vlc?.dispose();
       frames.clear();

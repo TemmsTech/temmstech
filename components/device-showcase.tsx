@@ -26,6 +26,8 @@ import "./screen-desktop.css";
 import "./screen-explorer.css";
 import "./screen-granola.css";
 import "./screen-recycle-bin.css";
+import "./screen-power.css";
+import "./screen-start.css";
 import "./screen-terminal.css";
 import "./screen-whatsapp.css";
 import "./screen-vscode.css";

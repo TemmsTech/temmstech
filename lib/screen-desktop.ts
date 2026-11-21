@@ -161,6 +161,9 @@ export type ScreenDesktop = {
   /** The ChatGPT taskbar button: only on show while the window is open or minimised (Windows desktop only). */
   chatgptButton: HTMLElement;
   setChatgpt: (chatgpt: DesktopApp) => void;
+  /** The Start button (Windows desktop, only where the Start menu is on). */
+  startButton: HTMLElement | undefined;
+  setStart: (open: boolean) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -211,6 +214,8 @@ type DesktopHandlers = {
   onChatgpt?: () => void;
   /** The ChatGPT desktop icon was double-clicked. */
   onOpenChatgpt?: () => void;
+  /** The Start button was pressed. When this is missing the Start button stays decoration. */
+  onStart?: () => void;
 };
 
 /**
@@ -245,6 +250,7 @@ export function createScreenDesktop(
     onOpenClaude,
     onChatgpt,
     onOpenChatgpt,
+    onStart,
   }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
@@ -401,6 +407,15 @@ export function createScreenDesktop(
   chatgptButton.hidden = true;
   chatgptButton.dataset.state = "closed";
   chatgptButton.setAttribute("aria-label", "Open ChatGPT");
+  // Start opens the Start menu; where there is none (main) it stays a plain picture.
+  const startButton = !mac && onStart
+    ? taskbarButton("screen-taskbar-start", sprite("bar", BAR.start), onStart)
+    : undefined;
+  if (startButton) {
+    startButton.dataset.state = "closed";
+    startButton.dataset.open = "false";
+    startButton.setAttribute("aria-label", "Start");
+  }
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -464,7 +479,7 @@ export function createScreenDesktop(
     );
     const centre = create("div", "screen-taskbar-centre");
     centre.append(
-      item(BAR.start),
+      startButton ?? item(BAR.start),
       search,
       item(BAR.taskview),
       appButton,
@@ -539,6 +554,12 @@ export function createScreenDesktop(
     chromeButton,
     claudeButton,
     chatgptButton,
+    startButton,
+    setStart(open) {
+      if (!startButton) return;
+      startButton.dataset.open = String(open);
+      startButton.setAttribute("aria-label", open ? "Close Start" : "Start");
+    },
     setChatgpt(chatgpt) {
       chatgptButton.hidden = chatgpt === "closed";
       chatgptButton.dataset.state = chatgpt;
