@@ -155,6 +155,9 @@ export type ScreenDesktop = {
   /** The Chrome taskbar button: only on show while the window is open or minimised (Windows desktop only). */
   chromeButton: HTMLElement;
   setChrome: (chrome: DesktopApp) => void;
+  /** The Claude taskbar button: only on show while the window is open or minimised (Windows desktop only). */
+  claudeButton: HTMLElement;
+  setClaude: (claude: DesktopApp) => void;
   setApp: (app: DesktopApp) => void;
   setVideo: (video: DesktopVideo) => void;
   dispose: () => void;
@@ -197,6 +200,10 @@ type DesktopHandlers = {
   onChrome?: () => void;
   /** The Google Chrome desktop icon was double-clicked. */
   onOpenChrome?: () => void;
+  /** The Claude taskbar button was pressed. */
+  onClaude?: () => void;
+  /** The Claude desktop icon was double-clicked. */
+  onOpenClaude?: () => void;
 };
 
 /**
@@ -227,6 +234,8 @@ export function createScreenDesktop(
     onOpenVlc,
     onChrome,
     onOpenChrome,
+    onClaude,
+    onOpenClaude,
   }: DesktopHandlers,
 ): ScreenDesktop {
   const mac = style === "mac";
@@ -254,6 +263,7 @@ export function createScreenDesktop(
   let vlcIcon: HTMLButtonElement | undefined;
   let chromeIcon: HTMLButtonElement | undefined;
   let chromeCell = 0;
+  let claudeIcon: HTMLButtonElement | undefined;
   let edgeIcon: HTMLButtonElement | undefined;
   if (!mac) {
     // Laid out like the real desktop: columns of eight, filled top to bottom,
@@ -281,6 +291,7 @@ export function createScreenDesktop(
     );
     chromeCell = DESKTOP_ICONS.indexOf("Google Chrome");
     chromeIcon = desktopIcons[chromeCell];
+    claudeIcon = desktopIcons[DESKTOP_ICONS.indexOf("Claude")];
     braveIcon = desktopIcons[DESKTOP_ICONS.indexOf("Brave")];
     granolaIcon = desktopIcons[DESKTOP_ICONS.indexOf("Granola")];
     binIcon = desktopIcons[DESKTOP_ICONS.indexOf("Recycle Bin")];
@@ -369,6 +380,11 @@ export function createScreenDesktop(
   chromeButton.hidden = true;
   chromeButton.dataset.state = "closed";
   chromeButton.setAttribute("aria-label", "Open Google Chrome");
+  // Claude is not pinned either: its button shows only while the window is open or minimised.
+  const claudeButton = taskbarButton("screen-desktop-claude", claudeLogo(undefined, 3), () => onClaude?.());
+  claudeButton.hidden = true;
+  claudeButton.dataset.state = "closed";
+  claudeButton.setAttribute("aria-label", "Open Claude");
   const videoButton = taskbarButton("screen-desktop-video", ICONS.video, onVideo);
   videoButton.hidden = true;
   videoButton.setAttribute("aria-label", "Open video");
@@ -449,6 +465,7 @@ export function createScreenDesktop(
       vlcButton,
       binButton,
       chromeButton,
+      claudeButton,
       videoButton,
     );
     const trayBox = create("div", "screen-tray");
@@ -481,6 +498,7 @@ export function createScreenDesktop(
       if (again && icon === binIcon) onOpenBin();
       if (again && icon === vlcIcon) onOpenVlc?.();
       if (again && icon === chromeIcon) onOpenChrome?.();
+      if (again && icon === claudeIcon) onOpenClaude?.();
     });
   }
   // A press anywhere else on the device clears the selection (presses on the
@@ -501,6 +519,16 @@ export function createScreenDesktop(
     binButton,
     vlcButton,
     chromeButton,
+    claudeButton,
+    setClaude(claude) {
+      claudeButton.hidden = claude === "closed";
+      claudeButton.dataset.state = claude;
+      claudeButton.setAttribute(
+        "aria-label",
+        claude === "open" ? "Minimise Claude" : "Open Claude",
+      );
+      if (claude !== "open") select();
+    },
     setChrome(chrome) {
       chromeButton.hidden = chrome === "closed";
       chromeButton.dataset.state = chrome;

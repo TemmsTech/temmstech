@@ -20,6 +20,7 @@ import {
 import type { ShowcaseProject, ShowcaseVideo } from "@/types/showcase";
 import "./screen-brave.css";
 import "./screen-chrome.css";
+import "./screen-claude.css";
 import "./screen-desktop.css";
 import "./screen-explorer.css";
 import "./screen-granola.css";

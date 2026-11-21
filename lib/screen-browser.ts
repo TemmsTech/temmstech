@@ -6,6 +6,7 @@ import {
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
 import { createScreenBrave } from "@/lib/screen-brave";
 import { createScreenChrome } from "@/lib/screen-chrome";
+import { createScreenClaude } from "@/lib/screen-claude";
 import { createScreenExplorer } from "@/lib/screen-explorer";
 import { createScreenGranola } from "@/lib/screen-granola";
 import { createScreenRecycleBin } from "@/lib/screen-recycle-bin";
@@ -271,6 +272,8 @@ export function createScreenBrowser(
         },
         onChrome: () => chromeApp?.toggle(),
         onOpenChrome: () => chromeApp?.open(),
+        onClaude: () => claudeApp?.toggle(),
+        onOpenClaude: () => claudeApp?.open(),
       });
   if (desk) {
     root.dataset.desktop = desktopStyle;
@@ -341,6 +344,16 @@ export function createScreenBrowser(
           },
         })
       : undefined;
+  const claudeApp =
+    desk && desktopStyle === "windows"
+      ? createScreenClaude(root, {
+          target: () => centreOf(desk.claudeButton, root),
+          onChange: (state) => {
+            desk.setClaude(state);
+            if (state === "open") raise("claude");
+          },
+        })
+      : undefined;
   const granola =
     desk && desktopStyle === "windows"
       ? createScreenGranola(root, {
@@ -391,7 +404,7 @@ export function createScreenBrowser(
 
   // The windows' stacking order, lowest first; z-index 1.. follows it, below
   // the video layer. Opening or restoring a window moves it to the end.
-  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola" | "bin" | "chrome";
+  type AppName = "browser" | "code" | "explorer" | "terminal" | "whatsapp" | "brave" | "granola" | "bin" | "chrome" | "claude";
   const stack: AppName[] = ["browser"];
   function raise(name: AppName) {
     const at = stack.indexOf(name);
@@ -408,6 +421,7 @@ export function createScreenBrowser(
       granola: granola?.element,
       bin: bin?.element,
       chrome: chromeApp?.element,
+      claude: claudeApp?.element,
     };
     stack.forEach((app, index) => {
       const layer = layers[app];
@@ -681,6 +695,7 @@ export function createScreenBrowser(
       granola?.dispose();
       bin?.dispose();
       chromeApp?.dispose();
+      claudeApp?.dispose();
       player?.dispose();
       vlc?.dispose();
       frames.clear();
