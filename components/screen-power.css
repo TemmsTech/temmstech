@@ -227,3 +227,84 @@
     animation: none;
   }
 }
+
+/* Sign-in area: the form, or (after a correct password) spinning dots in the same place. */
+.pw-actions {
+  display: grid;
+  justify-items: center;
+}
+.pw-actions > * {
+  grid-area: 1 / 1;
+}
+.pw-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transition: opacity 200ms var(--ease-out);
+}
+.pw-busy {
+  display: flex;
+  justify-content: center;
+  align-self: start;
+  padding-top: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-out) 80ms;
+}
+.pw-signin[data-busy] .pw-form {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    visibility 0s linear 200ms;
+}
+.pw-signin[data-busy] .pw-busy {
+  opacity: 1;
+}
+/* Five dots chasing each other round a circle, like the Windows sign-in. */
+.pw-dots {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+.pw-dot {
+  position: absolute;
+  inset: 0;
+  animation: pw-orbit 1.8s cubic-bezier(0.4, 0.1, 0.6, 0.9) infinite;
+}
+.pw-dot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #fff;
+}
+.pw-dot:nth-child(2) {
+  animation-delay: -220ms;
+}
+.pw-dot:nth-child(3) {
+  animation-delay: -440ms;
+}
+.pw-dot:nth-child(4) {
+  animation-delay: -660ms;
+}
+.pw-dot:nth-child(5) {
+  animation-delay: -880ms;
+}
+@keyframes pw-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-dot {
+    animation: none;
+  }
+}

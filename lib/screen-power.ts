@@ -8,6 +8,8 @@ const RESTART_MS = 1800;
 const BLACK_MS = 700;
 const BOOT_MS = 2500;
 const CLOCK_MS = 10_000;
+/** How long the "Welcome" spinner shows after a correct password. */
+const WELCOME_MS = 1600;
 /** The sign-in password, in any letter case. */
 const PASSWORD = "password";
 const MAX_LENGTH = 32;
@@ -66,16 +68,24 @@ export function createScreenPower(
   const fieldText = create("span", "pw-field-text");
   field.appendChild(fieldText);
   const problem = create("span", "pw-problem");
-  const tip = create("span", "pw-tip", "Hint: password");
+  const tip = create("span", "pw-tip", "Hint: what do you need to log in?");
   button.type = "button";
   button.tabIndex = -1;
+  // The password box, error, button and hint sit in one area; after a correct password only
+  // that area turns into spinning dots, while the avatar, name and wallpaper stay put.
+  const form = create("div", "pw-form");
+  form.append(field, problem, button, tip);
+  const busyArea = create("div", "pw-busy");
+  busyArea.setAttribute("aria-hidden", "true");
+  const dots = create("span", "pw-dots");
+  for (let i = 0; i < 5; i++) dots.appendChild(create("i", "pw-dot"));
+  busyArea.appendChild(dots);
+  const actions = create("div", "pw-actions");
+  actions.append(form, busyArea);
   signin.append(
     create("span", "pw-avatar", name.slice(0, 1)),
     create("span", "pw-name", name),
-    field,
-    problem,
-    button,
-    tip,
+    actions,
   );
   const blue = create("div", "pw-layer pw-blue");
   const waitText = create("span", "pw-wait-text");
@@ -94,6 +104,7 @@ export function createScreenPower(
 
   let view: View = "none";
   let typed = "";
+  let busy = false;
   let off = false;
   let timers: ReturnType<typeof setTimeout>[] = [];
   let clock: ReturnType<typeof setInterval> | undefined;
@@ -132,13 +143,20 @@ export function createScreenPower(
   }
   function reset() {
     typed = "";
+    busy = false;
+    delete signin.dataset.busy;
     problem.textContent = "";
     delete signin.dataset.shake;
     paintField();
   }
   function submit() {
+    if (busy) return;
     if (typed.toLowerCase() === PASSWORD) {
-      show("none");
+      // Right password: the box and button turn into spinning dots, then the desktop.
+      busy = true;
+      typed = "";
+      signin.dataset.busy = "";
+      later(WELCOME_MS, () => show("none"));
       return;
     }
     typed = "";
@@ -192,6 +210,7 @@ export function createScreenPower(
     event.preventDefault();
     event.stopPropagation();
     if (view === "signin") {
+      if (busy) return;
       if (event.key === "Enter") submit();
       else if (event.key === "Escape") show("lock");
       else if (event.key === "Backspace") {

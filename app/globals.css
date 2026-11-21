@@ -1623,7 +1623,10 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   flex-direction: column;
   overflow: hidden;
   transform-origin: 0 0;
-  pointer-events: none;
+  /* The screen itself catches the mouse, so its empty parts show the normal arrow
+     instead of the 3D canvas's grab hand underneath; clickable parts set their own cursor. */
+  pointer-events: auto;
+  cursor: default;
   user-select: none;
   color: var(--foreground);
   background: var(--ink);
