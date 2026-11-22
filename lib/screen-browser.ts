@@ -31,6 +31,12 @@ const TYPING_STEP_MS = 22;
 const vlcEnabled = () => true;
 // How long a simulated reload covers the page; the progress bar runs 900ms.
 const RELOAD_MS = 900;
+// Most tabs open at once; the strip stays readable up to here.
+const MAX_TABS = 9;
+// From this many open tabs the strip drops the tab icons to make room.
+const DENSE_TABS = 7;
+// How long the "not a valid address" hint stays up.
+const INVALID_MS = 1800;
 const CONTROL_LABELS = {
   minimise: "Minimise",
   maximise: "Maximise",
@@ -81,9 +87,45 @@ function create<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** One tab: a showcase site, or a tab the visitor opened (blank until an address is typed). */
+type Entry = { title: string; url: string };
+
 function addressOf(url: string) {
-  const { host, pathname } = new URL(url);
-  return pathname === "/" ? host : `${host}${pathname}`;
+  if (!url) return "";
+  const { host, pathname, search, hash } = new URL(url);
+  const path = pathname === "/" && !search && !hash ? "" : pathname;
+  return `${host}${path}${search}${hash}`;
+}
+
+/** The site's name for a tab: its host without a leading "www.". */
+function labelOf(url: string) {
+  return new URL(url).hostname.replace(/^www\./, "");
+}
+
+/**
+ * Turns what a visitor typed into a page address, or undefined when it is not
+ * a web link. Only http and https links to a named site are accepted; http is
+ * upgraded to https (an https page cannot frame an http one), and anything
+ * else (javascript:, data:, file:, bare words, IP addresses, links with a
+ * login in them) is refused.
+ */
+function parseAddress(input: string) {
+  const text = input.trim();
+  if (!text || text.length > 2048 || /\s/.test(text)) return undefined;
+  const explicit = /^https?:\/\//i.test(text);
+  if (!explicit && /^[a-z][a-z0-9+.-]*:\/\//i.test(text)) return undefined;
+  let url: URL;
+  try {
+    url = new URL(explicit ? text : `https://${text}`);
+  } catch {
+    return undefined;
+  }
+  if (url.username || url.password) return undefined;
+  const named =
+    /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
+  if (!named.test(url.hostname)) return undefined;
+  url.protocol = "https:";
+  return url.href;
 }
 
 /**
@@ -114,17 +156,35 @@ export function createScreenBrowser(
   root.appendChild(win);
 
   const pill = create("div", "screen-browser-pill");
-  const tabs = phone
-    ? []
-    : projects.map((project) => {
-        const tab = create("div", "screen-browser-tab");
-        tab.append(
-          create("span", "screen-browser-tab-icon", project.title.charAt(0)),
-          create("span", "screen-browser-tab-title", project.title),
-        );
-        return tab;
-      });
+  // Every tab, in strip order: the showcase sites first, then any the visitor
+  // opens. Indices never change or get reused, so a closed tab keeps its slot.
+  const entries: Entry[] = projects.map(({ title, url }) => ({ title, url }));
+  const isOwn = (index: number) => index >= projects.length;
+  function makeTab(index: number) {
+    const entry = entries[index];
+    const tab = create("div", "screen-browser-tab");
+    // Closes this tab only; it must not also select it.
+    const closeTab = create("button", "screen-browser-tab-close");
+    closeTab.type = "button";
+    closeTab.tabIndex = -1;
+    closeTab.setAttribute("aria-label", `Close ${entry.title} tab`);
+    closeTab.innerHTML = WINDOW_ICONS.close;
+    closeTab.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeTabAt(index);
+    });
+    tab.append(
+      create("span", "screen-browser-tab-icon", entry.title.charAt(0)),
+      create("span", "screen-browser-tab-title", entry.title),
+      closeTab,
+    );
+    tab.title = entry.title;
+    tab.addEventListener("click", () => select(index));
+    return tab;
+  }
+  const tabs = phone ? [] : entries.map((_, index) => makeTab(index));
   let tabStrip: HTMLElement | undefined;
+  let addTab: HTMLButtonElement | undefined;
   const controlButtons: Partial<
     Record<"minimise" | "maximise" | "close", HTMLButtonElement>
   > = {};
@@ -132,7 +192,6 @@ export function createScreenBrowser(
   else {
     tabStrip = create("div", "screen-browser-tabs");
     // The right end of the strip is kept clear for the window controls.
-    pill.style.width = `calc((100% - 14px - var(--window-controls)) / ${projects.length})`;
     const controls = create("div", "screen-browser-controls");
     for (const name of ["minimise", "maximise", "close"] as const) {
       const control = create("button", "screen-browser-control");
@@ -148,19 +207,40 @@ export function createScreenBrowser(
       controlButtons[name] = control;
       controls.appendChild(control);
     }
-    tabStrip.append(pill, ...tabs, controls);
+    addTab = create("button", "screen-browser-tab-add", "+");
+    addTab.type = "button";
+    addTab.tabIndex = -1;
+    addTab.setAttribute("aria-label", "New tab");
+    addTab.addEventListener("click", () => openTab());
+    tabStrip.append(pill, ...tabs, addTab, controls);
     win.appendChild(tabStrip);
     // Pressing a tab must not start turning the device by hand.
     tabStrip.addEventListener("pointerdown", (event) => event.stopPropagation());
-    tabs.forEach((tab, index) =>
-      tab.addEventListener("click", () => dispatchShowcaseTab(host, index)),
-    );
   }
 
   const bar = create("div", "screen-browser-bar");
   const address = create("div", "screen-browser-address");
-  const urlText = create("span", "screen-browser-url");
-  address.append(create("span", "screen-browser-scheme", "https://"), urlText);
+  // Laptop and tablet: a real text field. The phone's bar is only a label.
+  const urlInput = phone ? undefined : create("input", "screen-browser-url");
+  const urlText = phone ? create("span", "screen-browser-url") : undefined;
+  address.append(
+    create("span", "screen-browser-scheme", "https://"),
+    (urlInput ?? urlText) as HTMLElement,
+  );
+  // For a page the visitor typed in: many sites refuse to be shown inside
+  // another page and browsers offer no way round that, so it opens for real.
+  const external = create(
+    "button",
+    "screen-browser-external",
+    "Open in a real tab ↗",
+  );
+  external.type = "button";
+  external.tabIndex = -1;
+  external.hidden = true;
+  external.addEventListener("click", () => {
+    const url = entries[active]?.url;
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  });
   const progress = create("div", "screen-browser-load");
   if (!phone) {
     const nav = create("div", "screen-browser-nav");
@@ -181,22 +261,73 @@ export function createScreenBrowser(
     // Pressing a control must not start turning the device by hand.
     bar.addEventListener("pointerdown", (event) => event.stopPropagation());
   }
-  bar.append(address, progress);
+  if (urlInput) {
+    urlInput.type = "text";
+    urlInput.tabIndex = -1;
+    urlInput.maxLength = 2048;
+    urlInput.spellcheck = false;
+    urlInput.autocomplete = "off";
+    urlInput.autocapitalize = "off";
+    urlInput.inputMode = "url";
+    urlInput.enterKeyHint = "go";
+    urlInput.placeholder = "Type a web address";
+    urlInput.setAttribute("aria-label", "Address bar");
+    urlInput.addEventListener("focus", () =>
+      requestAnimationFrame(() => urlInput.select()),
+    );
+    urlInput.addEventListener("input", () => {
+      clearInterval(typingTimer);
+      clearInvalid();
+    });
+    urlInput.addEventListener("keydown", (event) => {
+      // Typing here must not reach the page's own key handling.
+      event.stopPropagation();
+      if (event.key === "Enter") submitAddress();
+      else if (event.key === "Escape") {
+        showAddress(addressOf(entries[active]?.url ?? ""));
+        clearInvalid();
+        urlInput.blur();
+      }
+    });
+  }
+  bar.append(address, external, progress);
   win.appendChild(bar);
 
   const stage = create("div", "screen-browser-stage");
-  const pages = projects.map((project) => {
+  type Page = {
+    page: HTMLElement;
+    loading: HTMLElement;
+    title: HTMLElement;
+    blank?: HTMLElement;
+  };
+  // A page holds the loading placeholder and, once it loads, the site's iframe.
+  // A tab the visitor opened starts as a blank "new tab" page with no placeholder.
+  function makePage(index: number): Page {
+    const entry = entries[index];
     const page = create("div", "screen-browser-page");
     page.dataset.state = "idle";
     const loading = create("div", "live-frame-loading");
-    loading.append(
-      create("span", "live-frame-sheen"),
-      create("p", "screen-browser-loading-title", project.title),
-    );
+    const title = create("p", "screen-browser-loading-title", entry.title);
+    loading.append(create("span", "live-frame-sheen"), title);
     page.appendChild(loading);
+    let blank: HTMLElement | undefined;
+    if (!entry.url) {
+      loading.dataset.loaded = "";
+      blank = create("div", "screen-browser-newtab");
+      blank.append(
+        create("p", "screen-browser-newtab-title", "New tab"),
+        create(
+          "p",
+          "screen-browser-newtab-hint",
+          "Type a web address in the bar above and press Enter.",
+        ),
+      );
+      page.appendChild(blank);
+    }
     stage.appendChild(page);
-    return { page, loading };
-  });
+    return { page, loading, title, blank };
+  }
+  const pages = projects.map((_, index) => makePage(index));
   win.appendChild(stage);
 
   // Click-to-interact: the site stays behind a shield so the page can still
@@ -236,9 +367,14 @@ export function createScreenBrowser(
                     : state === "open" || state === "mini"
                       ? "open"
                       : state === "closed"
-                        ? "closed"
+                        ? "hidden"
                         : "minimised",
                 );
+              },
+              // The video ended or was closed: leave the browser on its taskbar
+              // button so the visitor lands on the desktop (it is one click away).
+              onDone: () => {
+                if (!windowHidden()) setWindow("minimised");
               },
             },
       )
@@ -503,6 +639,8 @@ export function createScreenBrowser(
   host.addEventListener("pointerleave", disengage);
 
   const frames = new Map<number, HTMLIFrameElement>();
+  // Tabs the visitor has closed. They stay in the data; only the strip hides them.
+  const closed = new Set<number>();
   let active = 0;
   let live = false;
   let typingTimer: ReturnType<typeof setInterval> | undefined;
@@ -575,6 +713,7 @@ export function createScreenBrowser(
     announceWindow();
   }
   function reopen() {
+    if (windowState === "closed") restoreTabs();
     setWindow(windowState === "closed" ? "full" : restoreTo);
   }
   function pressControl(name: "minimise" | "maximise" | "close") {
@@ -590,15 +729,15 @@ export function createScreenBrowser(
   }
 
   function mountFrame(index: number) {
-    if (!live || !projects[index]) return;
+    if (!live || !entries[index]) return;
     mountSite(index);
   }
 
   function mountSite(index: number) {
-    const project = projects[index];
-    if (!project || frames.has(index)) return;
+    const entry = entries[index];
+    if (!entry?.url || closed.has(index) || frames.has(index)) return;
     const frame = document.createElement("iframe");
-    frame.title = `${project.title} live website preview`;
+    frame.title = `${entry.title} live website preview`;
     frame.setAttribute(
       "sandbox",
       "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox",
@@ -612,19 +751,167 @@ export function createScreenBrowser(
       frame.dataset.loaded = "";
       if (reloading !== index) loading.dataset.loaded = "";
     });
-    frame.src = project.url;
+    frame.src = entry.url;
     page.appendChild(frame);
     frames.set(index, frame);
   }
 
   // Back and forward walk the tabs like a history, through the same path a
   // tab click takes, so the rest of the showcase stays in step.
+  function openTabs() {
+    return entries.map((_, i) => i).filter((i) => !closed.has(i));
+  }
   function step(direction: 1 | -1) {
-    if (projects.length < 2) return;
-    dispatchShowcaseTab(
-      host,
-      (active + direction + projects.length) % projects.length,
-    );
+    const open = openTabs();
+    if (open.length < 2) return;
+    const at = open.indexOf(active);
+    select(open[(at + direction + open.length) % open.length] ?? 0);
+  }
+  // A tab opens locally; only the showcase's own sites also move the hero.
+  function select(index: number) {
+    if (closed.has(index) || !entries[index]) return;
+    setActive(index, true);
+    if (!isOwn(index)) dispatchShowcaseTab(host, index);
+  }
+
+  // The highlight sits behind the open tabs only, which share the strip
+  // (minus the room kept for the + button and the window controls).
+  function layoutTabs() {
+    if (phone || !tabStrip) return;
+    const open = openTabs();
+    if (addTab) addTab.disabled = open.length >= MAX_TABS;
+    if (open.length > DENSE_TABS) tabStrip.dataset.dense = "";
+    else delete tabStrip.dataset.dense;
+    if (!open.length) return;
+    pill.style.width = `calc((100% - 14px - var(--window-controls) - var(--tab-add)) / ${open.length})`;
+    const position = open.filter((i) => i < active).length;
+    pill.style.transform = `translateX(${position * 100}%)`;
+  }
+
+  // A closed tab ends its page and stays closed: nothing brings it back until
+  // the whole page is refreshed, which restarts the simulation.
+  function removeTab(index: number) {
+    if (reloading === index) endReload();
+    closed.add(index);
+    tabs[index].hidden = true;
+    frames.get(index)?.remove();
+    frames.delete(index);
+    const { page, loading } = pages[index];
+    delete loading.dataset.loaded;
+    delete loading.dataset.reload;
+    page.dataset.state = "idle";
+    // A tab the visitor opened leaves nothing behind in the page.
+    if (isOwn(index)) {
+      tabs[index].remove();
+      page.remove();
+    }
+  }
+
+  // The tab to the right of a closed one takes over, else the one to its left.
+  // Closing the last tab closes the window, like a real browser.
+  function closeTabAt(index: number) {
+    if (closed.has(index) || !entries[index]) return;
+    if (openTabs().length <= 1) {
+      removeTab(index);
+      layoutTabs();
+      setWindow("closed");
+      return;
+    }
+    const wasActive = index === active;
+    removeTab(index);
+    if (wasActive) {
+      const open = openTabs();
+      select(open.find((i) => i > index) ?? open[open.length - 1] ?? 0);
+    } else layoutTabs();
+  }
+
+  // The window opens again after its last tab was closed: a fresh, blank tab.
+  function restoreTabs() {
+    if (!openTabs().length) openTab(undefined, false);
+  }
+
+  // A new tab joins the end of the strip. With an address it loads that page;
+  // without one it is a blank page and the address bar takes the typing.
+  function openTab(url?: string, focus = true) {
+    if (phone || !tabStrip || !addTab) return;
+    if (openTabs().length >= MAX_TABS) return;
+    const index = entries.length;
+    entries.push({ title: "New tab", url: "" });
+    const tab = makeTab(index);
+    tabs.push(tab);
+    tabStrip.insertBefore(tab, addTab);
+    pages.push(makePage(index));
+    setActive(index, true);
+    if (url) navigate(index, url);
+    else if (focus && matchMedia("(pointer: fine)").matches)
+      urlInput?.focus({ preventScroll: true });
+  }
+
+  // Shows a page the visitor asked for in one of their own tabs: the tab takes
+  // the site's name and the page loads behind the same placeholder as ours.
+  function navigate(index: number, url: string) {
+    const entry = entries[index];
+    if (!entry || !isOwn(index) || closed.has(index)) return;
+    const label = labelOf(url);
+    if (reloading === index) endReload();
+    entry.url = url;
+    entry.title = label;
+    tabs[index].querySelector(".screen-browser-tab-icon")!.textContent =
+      label.charAt(0).toUpperCase();
+    tabs[index].querySelector(".screen-browser-tab-title")!.textContent = label;
+    tabs[index].title = label;
+    tabs[index]
+      .querySelector(".screen-browser-tab-close")!
+      .setAttribute("aria-label", `Close ${label} tab`);
+    const entryPage = pages[index];
+    entryPage.title.textContent = label;
+    entryPage.blank?.remove();
+    entryPage.blank = undefined;
+    frames.get(index)?.remove();
+    frames.delete(index);
+    delete entryPage.loading.dataset.loaded;
+    delete entryPage.loading.dataset.reload;
+    if (index === active) {
+      showAddress(addressOf(url));
+      restartProgress();
+      updateExternal();
+    }
+    mountFrame(index);
+  }
+
+  // What was typed in the address bar. A tab of ours keeps its own site, so
+  // the page opens in a new tab; a tab the visitor opened loads it in place.
+  function submitAddress() {
+    if (!urlInput) return;
+    const url = parseAddress(urlInput.value);
+    if (!url || (!isOwn(active) && openTabs().length >= MAX_TABS)) {
+      flagInvalid(url ? "Too many tabs open" : "Enter a valid web address");
+      return;
+    }
+    clearInvalid();
+    urlInput.blur();
+    if (isOwn(active) && !closed.has(active)) navigate(active, url);
+    else openTab(url);
+  }
+
+  let invalidTimer: ReturnType<typeof setTimeout> | undefined;
+  function flagInvalid(message: string) {
+    clearTimeout(invalidTimer);
+    address.dataset.invalid = message;
+    urlInput?.setAttribute("aria-invalid", "true");
+    invalidTimer = setTimeout(clearInvalid, INVALID_MS);
+  }
+  function clearInvalid() {
+    clearTimeout(invalidTimer);
+    delete address.dataset.invalid;
+    urlInput?.removeAttribute("aria-invalid");
+  }
+  function updateExternal() {
+    external.hidden = !(isOwn(active) && entries[active]?.url);
+  }
+  function showAddress(text: string) {
+    if (urlInput) urlInput.value = text;
+    else if (urlText) urlText.textContent = text;
   }
 
   // The site is already loaded and is never really reloaded: cover it with the
@@ -651,15 +938,15 @@ export function createScreenBrowser(
 
   function typeAddress(text: string, animate: boolean) {
     clearInterval(typingTimer);
-    if (!animate) {
-      urlText.textContent = text;
+    if (!animate || !text) {
+      showAddress(text);
       return;
     }
     let length = 0;
-    urlText.textContent = "";
+    showAddress("");
     typingTimer = setInterval(() => {
       length += 1;
-      urlText.textContent = text.slice(0, length);
+      showAddress(text.slice(0, length));
       if (length >= text.length) clearInterval(typingTimer);
     }, TYPING_STEP_MS);
   }
@@ -670,8 +957,12 @@ export function createScreenBrowser(
     progress.dataset.run = "";
   }
 
+  let shown = false;
   function setActive(index: number, animate: boolean) {
-    if (!projects[index]) return;
+    if (!entries[index] || closed.has(index)) return;
+    // Already open (a tab click reaches here once from the tab and again from the hero).
+    if (shown && index === active) return;
+    shown = true;
     const previous = active;
     active = index;
     endReload();
@@ -683,7 +974,7 @@ export function createScreenBrowser(
     tabs.forEach((tab, i) => {
       tab.dataset.active = String(i === index);
     });
-    pill.style.transform = `translateX(${index * 100}%)`;
+    layoutTabs();
     pages.forEach(({ page }, i) => {
       page.dataset.state =
         i === index
@@ -692,7 +983,9 @@ export function createScreenBrowser(
             ? "leaving"
             : "idle";
     });
-    typeAddress(addressOf(projects[index].url), animate);
+    clearInvalid();
+    typeAddress(addressOf(entries[index].url), animate);
+    updateExternal();
     if (animate) restartProgress();
     else {
       void root.offsetWidth;
@@ -704,6 +997,7 @@ export function createScreenBrowser(
   }
 
   setActive(0, false);
+  layoutTabs();
 
   return {
     update(corners, visible, cover) {
@@ -735,6 +1029,7 @@ export function createScreenBrowser(
     dispose() {
       clearInterval(typingTimer);
       clearTimeout(reloadTimer);
+      clearTimeout(invalidTimer);
       host.removeEventListener("pointerleave", disengage);
       live = false;
       announceWindow();

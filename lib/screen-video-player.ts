@@ -62,6 +62,8 @@ export type PlayerDock = {
   target: () => { x: number; y: number } | undefined;
   /** Called whenever the player goes between idle, open, minimised to and closed on the taskbar. */
   onChange: (state: "idle" | "open" | "mini" | "docked" | "closed") => void;
+  /** Called when the intro video plays to its end, or the player is closed: the visitor is done with it. */
+  onDone?: () => void;
 };
 
 const formatTime = (seconds: number) => {
@@ -558,6 +560,7 @@ export function createScreenVideoPlayer(
       // over the next time it is opened.
       video.currentTime = 0;
       state = "closed";
+      taskbar.onDone?.();
     } else state = "docked";
     sync();
   }
@@ -603,6 +606,7 @@ export function createScreenVideoPlayer(
       setStopped(true);
       return;
     }
+    taskbar?.onDone?.();
     if (state === "open") shrink();
     else if (state === "mini") scheduleClose();
   });
@@ -637,6 +641,8 @@ export function createScreenVideoPlayer(
     } else video.pause();
   });
   muteButton.addEventListener("click", () => {
+    // The first press ends the "turn sound on" pulse for the rest of the visit.
+    muteButton.dataset.nudged = "true";
     video.muted = !video.muted;
     if (!video.muted && video.volume === 0) video.volume = 1;
   });

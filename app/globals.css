@@ -1636,6 +1636,8 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 }
 .screen-browser-tabs {
   --window-controls: 156px;
+  /* Room kept after the last tab for the + button. */
+  --tab-add: 48px;
   position: relative;
   display: flex;
   flex: none;
@@ -1691,6 +1693,80 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 .screen-browser-tab[data-active="true"] {
   color: var(--foreground);
 }
+.screen-browser-tab[hidden] {
+  display: none;
+}
+/* Closes one tab: always on the open tab, on the others while a mouse is over them. */
+.screen-browser button.screen-browser-tab-close {
+  display: grid;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms var(--ease-out),
+    background-color 150ms var(--ease-out);
+}
+.screen-browser-tab-close svg {
+  width: 14px;
+  height: 14px;
+}
+.screen-browser-tab[data-active="true"] .screen-browser-tab-close,
+:where(:root[data-pointer="fine"]) .screen-browser-tab:hover .screen-browser-tab-close {
+  opacity: 1;
+}
+.screen-browser button.screen-browser-tab-close:hover {
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+/* With many tabs open the strip drops the icons to give the titles room. */
+.screen-browser-tabs[data-dense] .screen-browser-tab {
+  gap: 6px;
+  padding: 0 8px;
+}
+.screen-browser-tabs[data-dense] .screen-browser-tab-icon {
+  display: none;
+}
+/* Opens a new tab: sits after the last tab. */
+.screen-browser button.screen-browser-tab-add {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  padding: 0;
+  place-items: center;
+  align-self: center;
+  border: 0;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.screen-browser button.screen-browser-tab-add:hover:not(:disabled) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.screen-browser button.screen-browser-tab-add:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 .screen-browser-tab-icon {
   display: grid;
   flex: none;
@@ -1709,6 +1785,8 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 }
 .screen-browser-bar {
   position: relative;
+  /* Above the page, so the address bar's hint is never covered by it. */
+  z-index: 3;
   display: flex;
   flex: none;
   height: 60px;
@@ -1747,6 +1825,7 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   background: rgb(255 255 255 / 0.14);
 }
 .screen-browser-address {
+  position: relative;
   display: flex;
   min-width: 0;
   flex: 1;
@@ -1764,6 +1843,65 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 .screen-browser-url {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* The address bar is a real text field on the laptop and tablet. */
+.screen-browser input.screen-browser-url {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: text;
+  user-select: text;
+}
+.screen-browser input.screen-browser-url::placeholder {
+  color: var(--muted-foreground);
+}
+.screen-browser-address:focus-within {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.screen-browser-address[data-invalid] {
+  box-shadow: inset 0 0 0 2px var(--destructive);
+}
+.screen-browser-address[data-invalid]::after {
+  content: attr(data-invalid);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 8px 16px;
+  border: 2px solid var(--destructive);
+  border-radius: 12px;
+  font-size: 18px;
+  color: var(--foreground);
+  background: var(--card);
+  pointer-events: none;
+}
+/* Opens a page the visitor typed in as a real browser tab, for sites that refuse to be framed. */
+.screen-browser button.screen-browser-external {
+  flex: none;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 19px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font: inherit;
+  font-size: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.screen-browser button.screen-browser-external:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.screen-browser button.screen-browser-external[hidden] {
+  display: none;
 }
 .screen-browser-load {
   position: absolute;
@@ -1802,6 +1940,25 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
 }
 .screen-browser-page .live-frame-loading {
   pointer-events: none;
+}
+/* The page of a tab the visitor opened, before an address is typed. */
+.screen-browser-newtab {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 14px;
+  place-content: center;
+  text-align: center;
+  background: var(--ink);
+  pointer-events: none;
+}
+.screen-browser-newtab-title {
+  font-size: 40px;
+  color: var(--foreground);
+}
+.screen-browser-newtab-hint {
+  font-size: 22px;
+  color: var(--muted-foreground);
 }
 .screen-browser[data-engaged] .screen-browser-stage {
   pointer-events: auto;

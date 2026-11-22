@@ -503,6 +503,43 @@
 .screen-hud-mute[data-muted="false"] .icon-off {
   display: none;
 }
+/* Nudge to turn sound on: while the video plays muted, a soft cyan ring pulses
+   around the mute button (the VLC skin uses .vlc-mute, so it never matches).
+   The first press sets data-nudged, which ends it for the rest of the visit.
+   The ::after is out of flow, so the button's layout does not move. */
+.screen-player .screen-hud-mute {
+  position: relative;
+}
+.screen-player-layer:is([data-state="open"], [data-state="mini"])
+  .screen-hud-mute[data-muted="true"]:not([data-nudged="true"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--brand);
+  opacity: 0;
+  pointer-events: none;
+  animation: screen-hud-mute-pulse 1500ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+@keyframes screen-hud-mute-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+/* Reduced motion: no animation, a static highlight ring instead. */
+@media (prefers-reduced-motion: reduce) {
+  .screen-player-layer:is([data-state="open"], [data-state="mini"])
+    .screen-hud-mute[data-muted="true"]:not([data-nudged="true"])::after {
+    animation: none;
+    opacity: 0.8;
+    transform: none;
+  }
+}
 /* The small corner window (phones) gets a slimmer capsule. */
 .screen-player-layer:is([data-state="mini"], [data-state="docked"]) .screen-hud {
   bottom: 8px;
