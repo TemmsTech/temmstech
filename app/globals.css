@@ -286,8 +286,8 @@
   }
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .image-card:hover {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .image-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--card-shadow-raised);
   }
@@ -335,8 +335,8 @@
   transform: rotate(-3deg);
   transition: transform 250ms var(--default-transition-timing-function);
 }
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .project-preview:hover > div {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .project-preview:hover > div {
     transform: rotate(0deg) translateY(-3px);
   }
 }
@@ -988,8 +988,8 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
     animation: work-fan-fade 300ms ease backwards;
   }
 }
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .work-fan-card:hover {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .work-fan-card:hover {
     transform: var(--lift);
     box-shadow: var(--card-shadow-raised);
     z-index: 20;
@@ -1277,19 +1277,17 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
     transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
     box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-@media (hover: hover) and (pointer: fine) {
-  .glass-lift:hover,
-  .glass-lift:focus-within {
-    transform: translateY(-6px);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.14),
-      inset 0 -1px 0 rgb(0 0 0 / 0.35),
-      0 2px 2px #0000001f,
-      0 6px 12px #07111f2e,
-      0 20px 40px #07111f40,
-      0 44px 80px #07111f4d,
-      0 80px 140px #07111f59;
-  }
+:where(:root[data-pointer="fine"]) .glass-lift:hover,
+:where(:root[data-pointer="fine"]) .glass-lift:focus-within {
+  transform: translateY(-6px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 2px 2px #0000001f,
+    0 6px 12px #07111f2e,
+    0 20px 40px #07111f40,
+    0 44px 80px #07111f4d,
+    0 80px 140px #07111f59;
 }
 /* Close button: the red look and press-in come from the shared .btn styles.
    This only places it in the panel's top-right corner. It is written as
@@ -1379,10 +1377,8 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   .btn:where(:not(:disabled)) {
     cursor: pointer;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .btn:where(:not(:disabled)):hover {
-      filter: brightness(1.07);
-    }
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover {
+    filter: brightness(1.07);
   }
   .btn:where(:not(:disabled)):active {
     transform: translateY(1px) scale(0.985);
@@ -1572,34 +1568,34 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   --btn-pulse: var(--brand);
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   /* Arrows keep nudging forward and back for as long as their button, link or
      summary is hovered. Uses `transform`, which applies after an arrow's own
      `rotate`, so rotated arrows (down, up) move the way they point. */
-  :is(a, button, summary):where(:not(:disabled)):hover [data-arrow] {
+  :where(:root[data-pointer="fine"]) :is(a, button, summary):where(:not(:disabled)):hover [data-arrow] {
     animation: arrow-nudge 800ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
   }
-  .btn:where(:not(:disabled)):hover::after {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover::after {
     animation: btn-pulse 900ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
   }
-  .btn-destructive:where(:not(:disabled)):hover::after {
+  :where(:root[data-pointer="fine"]) .btn-destructive:where(:not(:disabled)):hover::after {
     animation: none;
   }
-  .btn-destructive:where(:not(:disabled)):hover,
-  .glass-close:hover {
+  :where(:root[data-pointer="fine"]) .btn-destructive:where(:not(:disabled)):hover,
+  :where(:root[data-pointer="fine"]) .glass-close:hover {
     animation: btn-shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   }
   /* Icon-only buttons (menu toggle) have no label to pulse around: wiggle the glyph. */
-  .btn:where(:not(:disabled)):hover > svg:only-child:not([data-arrow]) {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover > svg:only-child:not([data-arrow]) {
     animation: btn-wiggle 500ms ease-in-out;
   }
-  .btn:where(:not(:disabled)):hover:has(> svg:only-child:not([data-arrow]))::after {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover:has(> svg:only-child:not([data-arrow]))::after {
     animation: none;
   }
-  .glass-chip:hover {
+  :where(:root[data-pointer="fine"]) .glass-chip:hover {
     translate: 0 -2px;
   }
-  .glass-chip.btn {
+  :where(:root[data-pointer="fine"]) .glass-chip.btn {
     transition:
       transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
       translate 180ms cubic-bezier(0.23, 1, 0.32, 1),

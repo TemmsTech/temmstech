@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { site, contact } from "@/data/site";
 import { Navbar } from "@/modules/navbar";
 import { Footer } from "@/modules/footer";
+import { PointerMode } from "@/components/pointer-mode";
 import { navigation } from "@/data/navigation";
 import { services } from "@/data/services";
 import "@/app/globals.css";
@@ -27,6 +28,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
+        <PointerMode />
         <Navbar navigation={navigation} />
         <main id="main-content" tabIndex={-1}>
           {children}

@@ -63,10 +63,10 @@ export function DeviceShowcase({
   const zoom = useRef<ReturnType<typeof createZoom> | null>(null);
   const hint = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const changeMode = (next: typeof mode) => {
+  const changeMode = useCallback((next: typeof mode) => {
     modeRef.current = next;
     setMode(next);
-  };
+  }, []);
   // The tab timer waits while the device is being turned by hand.
   const [holding, setHolding] = useState(false);
   useEffect(() => {
@@ -235,7 +235,7 @@ export function DeviceShowcase({
       });
       if (refocus) hint.current?.focus({ preventScroll: true });
     },
-    [reducedMotion],
+    [changeMode, reducedMotion],
   );
   // The laptop scene is gone (tablet, phone, or a failed renderer): leave at once.
   useEffect(() => {
