@@ -3,6 +3,7 @@ import {
   resolveDesktop,
   type DesktopOption,
 } from "@/lib/screen-desktop";
+import { addressOf, labelOf, parseAddress } from "@/lib/screen-address";
 import { projectiveTransform, type Quad } from "@/lib/screen-portal";
 import { createScreenBrave } from "@/lib/screen-brave";
 import { createScreenChrome } from "@/lib/screen-chrome";
@@ -89,44 +90,6 @@ function create<K extends keyof HTMLElementTagNameMap>(
 
 /** One tab: a showcase site, or a tab the visitor opened (blank until an address is typed). */
 type Entry = { title: string; url: string };
-
-function addressOf(url: string) {
-  if (!url) return "";
-  const { host, pathname, search, hash } = new URL(url);
-  const path = pathname === "/" && !search && !hash ? "" : pathname;
-  return `${host}${path}${search}${hash}`;
-}
-
-/** The site's name for a tab: its host without a leading "www.". */
-function labelOf(url: string) {
-  return new URL(url).hostname.replace(/^www\./, "");
-}
-
-/**
- * Turns what a visitor typed into a page address, or undefined when it is not
- * a web link. Only http and https links to a named site are accepted; http is
- * upgraded to https (an https page cannot frame an http one), and anything
- * else (javascript:, data:, file:, bare words, IP addresses, links with a
- * login in them) is refused.
- */
-function parseAddress(input: string) {
-  const text = input.trim();
-  if (!text || text.length > 2048 || /\s/.test(text)) return undefined;
-  const explicit = /^https?:\/\//i.test(text);
-  if (!explicit && /^[a-z][a-z0-9+.-]*:\/\//i.test(text)) return undefined;
-  let url: URL;
-  try {
-    url = new URL(explicit ? text : `https://${text}`);
-  } catch {
-    return undefined;
-  }
-  if (url.username || url.password) return undefined;
-  const named =
-    /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
-  if (!named.test(url.hostname)) return undefined;
-  url.protocol = "https:";
-  return url.href;
-}
 
 /**
  * A DOM browser window that sits over a device's screen: a tab strip (laptop
@@ -391,17 +354,19 @@ export function createScreenBrowser(
           else raise("browser");
         },
         onVideo: () => player?.restore(),
-        onCode: () => code?.toggle(),
+        onCode: () => toggleApp("code", code),
         onOpenCode: () => code?.open(),
-        onExplorer: () => explorer?.toggle(),
-        onTerminal: () => terminal?.toggle(),
-        onWhatsApp: () => whatsapp?.toggle(),
-        onBrave: () => brave?.toggle(),
+        onExplorer: () => toggleApp("explorer", explorer),
+        onTerminal: () => toggleApp("terminal", terminal),
+        onWhatsApp: () => toggleApp("whatsapp", whatsapp),
+        onBrave: () => toggleApp("brave", brave),
         onOpenBrave: () => brave?.open(),
-        onGranola: () => granola?.toggle(),
+        onGranola: () => toggleApp("granola", granola),
         onOpenGranola: () => granola?.open(),
-        onBin: () => bin?.toggle(),
+        onBin: () => toggleApp("bin", bin),
         onOpenBin: () => bin?.open(),
+        // 3D Prototypes is an empty folder: File Explorer opens on it, like a real folder on the desktop.
+        onOpenPrototypes: () => explorer?.openPlace("3D Prototypes"),
         // VLC: the taskbar button opens it or sends it away; a double-click on the icon opens it.
         onVlc: () => {
           if (vlcState === "open" || vlcState === "mini") vlc?.minimise();
@@ -410,11 +375,11 @@ export function createScreenBrowser(
         onOpenVlc: () => {
           if (vlcState !== "open" && vlcState !== "mini") vlc?.restore();
         },
-        onChrome: () => chromeApp?.toggle(),
+        onChrome: () => toggleApp("chrome", chromeApp),
         onOpenChrome: () => chromeApp?.open(),
-        onClaude: () => claudeApp?.toggle(),
+        onClaude: () => toggleApp("claude", claudeApp),
         onOpenClaude: () => claudeApp?.open(),
-        onChatgpt: () => chatgptApp?.toggle(),
+        onChatgpt: () => toggleApp("chatgpt", chatgptApp),
         onOpenChatgpt: () => chatgptApp?.open(),
         onStart: () => start?.toggle(),
       });
@@ -581,6 +546,38 @@ export function createScreenBrowser(
       const layer = layers[app];
       if (layer) layer.style.zIndex = String(index + 1);
     });
+  }
+  // Focus follows the click: pressing anywhere on a visible window lifts it over
+  // the others, so a windowed (smaller) window never has to be minimised first.
+  // Capture phase, because each window stops pointerdown from bubbling out.
+  const clickable: Partial<Record<AppName, HTMLElement | undefined>> = {
+    browser: win,
+    code: code?.element,
+    explorer: explorer?.element,
+    terminal: terminal?.element,
+    whatsapp: whatsapp?.element,
+    brave: brave?.element,
+    granola: granola?.element,
+    bin: bin?.element,
+    chrome: chromeApp?.element,
+    claude: claudeApp?.element,
+    chatgpt: chatgptApp?.element,
+  };
+  if (desk)
+    for (const [name, layer] of Object.entries(clickable) as [AppName, HTMLElement | undefined][])
+      layer?.addEventListener(
+        "pointerdown",
+        () => {
+          if (stack[stack.length - 1] !== name) raise(name);
+        },
+        true,
+      );
+  // A taskbar button, like Windows: hidden opens it, open but under another window
+  // brings it forward, and only the window already on top minimises.
+  function toggleApp(name: AppName, app?: { hidden: () => boolean; toggle: () => void }) {
+    if (!app) return;
+    if (!app.hidden() && stack[stack.length - 1] !== name) raise(name);
+    else app.toggle();
   }
   // The Start menu (Windows desktop). It sits above every window and opens the ones this desktop has.
   // Lock, sleep, shut down and restart, from the Start menu's power button.

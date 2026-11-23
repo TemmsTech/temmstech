@@ -285,6 +285,11 @@ export type ScreenExplorer = {
   element: HTMLElement;
   /** Open (or bring back) the window. */
   open: () => void;
+  /**
+   * Open the window on one folder (a path such as "3D Prototypes"). A folder
+   * that is not part of the project listing opens as an empty one.
+   */
+  openPlace: (id: string) => void;
   /** Like a real taskbar button: hide a visible window, bring back a hidden one. */
   toggle: () => void;
   /** Whether the window is currently out of sight. */
@@ -700,6 +705,17 @@ export function createScreenExplorer(
   return {
     element: root,
     open,
+    openPlace(id) {
+      if (state === "closed") {
+        // A closed window starts fresh, straight on that folder.
+        reset();
+        place = id;
+        render();
+      } else {
+        go(id);
+      }
+      open();
+    },
     hidden,
     toggle() {
       if (hidden()) open();

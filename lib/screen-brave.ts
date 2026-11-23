@@ -1,10 +1,10 @@
 import { claudeLogo } from "@/lib/screen-app-icons";
+import { createScreenTabs, type ScreenTabs, type TabSpec } from "@/lib/screen-tabs";
 import { WINDOW_ICONS } from "@/lib/window-controls";
 
 /** What the Brave window is doing, as far as the desktop is concerned. */
 export type BraveState = "open" | "minimised" | "closed";
 type WindowState = "full" | "windowed" | "minimised" | "closed";
-type TabId = "temmstech" | "claude" | "chatgpt";
 
 const icon = (body: string, size = 17) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
@@ -36,20 +36,28 @@ const FAVICONS = {
     '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2.8l7.2 4.1v8.2L12 19.2l-7.2-4.1V6.9z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 7.5l4 2.3v4.4L12 16.5l-4-2.3V9.8z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>',
 } as const;
 
-type Tab = { id: TabId; title: string; url: string };
-
-/** The addresses of the Claude and ChatGPT tabs are made up. */
-const TABS: readonly Tab[] = [
-  { id: "temmstech", title: "TemmsTech — Built by us. Used by millions.", url: "localhost:3000" },
+/** The addresses of the Claude and ChatGPT tabs are made up. All three pages are pictures; anything else a visitor opens is live. */
+const TABS: readonly TabSpec[] = [
+  {
+    id: "temmstech",
+    title: "TemmsTech — Built by us. Used by millions.",
+    url: "localhost:3000",
+    favicon: FAVICONS.temmstech,
+    shot: "/images/brave/page-temmstech.webp",
+  },
   {
     id: "claude",
     title: "Building a multi-app desktop prototype",
     url: "claude.ai/chat/7f3a1c52-0d4e-4b9a-8e21-5c6d9b2a41f0",
+    favicon: FAVICONS.claude,
+    shot: "/images/brave/page-claude.webp",
   },
   {
     id: "chatgpt",
     title: "Add Leading Zeros Excel",
     url: "chatgpt.com/c/5b2e9d41-7a3c-4f08-b6d2-1e8c0a947f35",
+    favicon: FAVICONS.chatgpt,
+    shot: "/images/brave/page-chatgpt.webp",
   },
 ];
 
@@ -77,12 +85,10 @@ function create<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-const shot = (name: string) =>
-  `<img class="br-shot" src="/images/brave/page-${name}.webp" alt="" draggable="false" />`;
-
-const paneMarkup = (id: TabId) => {
+/** The inside of a picture tab's pane: its picture, and a few made-up parts laid over the ChatGPT one. */
+const shotMarkup = (spec: TabSpec) => {
   const extra =
-    id === "chatgpt"
+    spec.id === "chatgpt"
       ? `<ol class="br-gpt-recents">${GPT_RECENTS.map(
           (title, index) => `<li${index === 0 ? " data-on" : ""}>${esc(title)}</li>`,
         ).join("")}</ol>
@@ -90,7 +96,7 @@ const paneMarkup = (id: TabId) => {
           GPT_NAME.split(" ").map((part) => part[0]).join(""),
         )}</span><b>${esc(GPT_NAME)}</b><span>Free</span></div>`
       : "";
-  return `<div class="br-pane" data-pane="${id}"><div class="br-stage">${shot(id)}${extra}</div></div>`;
+  return `<div class="br-stage"><img class="br-shot" src="${spec.shot}" alt="" draggable="false" />${extra}</div>`;
 };
 
 export type ScreenBrave = {
@@ -112,10 +118,12 @@ type BraveOptions = {
 };
 
 /**
- * A static Brave window for the simulated Windows desktop. Three tabs (this
- * site, Claude, ChatGPT) switch when pressed; each page is a picture, so
- * nothing in it is live. The Claude and ChatGPT addresses, and the ChatGPT
- * account and chat list, are made up. Closing resets it to the first tab.
+ * A Brave window for the simulated Windows desktop. It starts with three tabs
+ * (this site, Claude, ChatGPT), each a picture; the Claude and ChatGPT
+ * addresses, and the ChatGPT account and chat list, are made up. Browsing is
+ * real (lib/screen-tabs.ts): tabs open, close and switch, and any web link typed
+ * in the address bar loads as a live page. Closing the window puts the three
+ * starting tabs back.
  */
 export function createScreenBrave(
   parent: HTMLElement,
@@ -123,7 +131,6 @@ export function createScreenBrave(
 ): ScreenBrave {
   const root = create("div", "screen-brave");
   root.dataset.window = "closed";
-  root.dataset.current = TABS[0].id;
   root.inert = true;
   root.addEventListener("pointerdown", (event) => event.stopPropagation());
   const win = create("div", "br-window");
@@ -138,41 +145,32 @@ export function createScreenBrave(
 
   win.innerHTML = `
     <div class="br-tabs">
-      ${TABS.map(
-        (tab) =>
-          `<button type="button" tabindex="-1" class="br-tab" data-tab="${tab.id}"><span class="br-fav">${FAVICONS[tab.id]}</span><span class="br-tab-title">${esc(tab.title)}</span><i aria-hidden="true">×</i></button>`,
-      ).join("")}
       <span class="br-tab-add">${ICONS.plus}</span>
       <span class="br-tab-more">${ICONS.chevron}</span>
       <span class="br-controls">${controls}</span>
     </div>
     <div class="br-bar">
-      <span class="br-nav"><span class="br-tool">${ICONS.back}</span><span class="br-tool" data-dim>${ICONS.forward}</span><span class="br-tool">${ICONS.reload}</span></span>
+      <span class="br-nav"><span class="br-tool" data-nav="back" data-dim>${ICONS.back}</span><span class="br-tool" data-nav="forward" data-dim>${ICONS.forward}</span><span class="br-tool" data-nav="reload">${ICONS.reload}</span></span>
       <span class="br-tool br-bookmark">${ICONS.bookmark}</span>
       <div class="br-url"><span class="br-info">${ICONS.info}</span><span class="br-url-text"></span><span class="br-url-end">${ICONS.shields}${ICONS.rewards}</span></div>
       <span class="br-tools">${[ICONS.download, ICONS.sidebar, ICONS.wallet, ICONS.sparkle, ICONS.vpn, ICONS.menu]
         .map((glyph) => `<span class="br-tool">${glyph}</span>`)
         .join("")}</span>
     </div>
-    <div class="br-page">${TABS.map((tab) => paneMarkup(tab.id)).join("")}</div>`;
+    <div class="br-page"></div>`;
   parent.appendChild(root);
 
-  const urlText = win.querySelector<HTMLElement>(".br-url-text")!;
   const maximise = win.querySelector<HTMLElement>('[data-control="maximise"]')!;
 
-  function setTab(id: TabId) {
-    root.dataset.current = id;
-    win.querySelectorAll<HTMLElement>("[data-tab]").forEach((tab) => {
-      if (tab.dataset.tab === id) tab.dataset.active = "";
-      else delete tab.dataset.active;
-    });
-    win.querySelectorAll<HTMLElement>("[data-pane]").forEach((pane) => {
-      if (pane.dataset.pane === id) pane.dataset.on = "";
-      else delete pane.dataset.on;
-    });
-    urlText.textContent = TABS.find((tab) => tab.id === id)?.url ?? "";
-  }
-  setTab(TABS[0].id);
+  // Tabs, the address bar, back, forward and reload live in the shared engine.
+  const tabs: ScreenTabs = createScreenTabs(win, {
+    prefix: "br",
+    specs: TABS,
+    shotMarkup,
+    onPage: () => {},
+    // Closing the last tab closes the window, like a real browser.
+    onEmpty: () => set("closed"),
+  });
 
   // ---- Window state ---------------------------------------------------------
   let state: WindowState = "closed";
@@ -203,10 +201,12 @@ export function createScreenBrave(
     root.dataset.window = next;
     root.inert = hidden();
     maximise.innerHTML = next === "full" ? WINDOW_ICONS.restore : WINDOW_ICONS.maximise;
+    // Sites only load while the window is on show.
+    tabs.setVisible(!hidden());
     // A closed window starts over once it has shrunk away.
     if (next === "closed")
       closeTimer = setTimeout(() => {
-        if (state === "closed") setTab(TABS[0].id);
+        if (state === "closed") tabs.reset();
       }, 600);
     onChange(next === "closed" ? "closed" : next === "minimised" ? "minimised" : "open");
   }
@@ -217,10 +217,9 @@ export function createScreenBrave(
   };
 
   root.addEventListener("click", (event) => {
-    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-tab],[data-control]");
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-control]");
     if (!hit) return;
-    if (hit.dataset.tab) setTab(hit.dataset.tab as TabId);
-    else if (hit.dataset.control === "minimise") set("minimised");
+    if (hit.dataset.control === "minimise") set("minimised");
     else if (hit.dataset.control === "close") set("closed");
     else if (hit.dataset.control === "maximise") {
       if (state === "full") set("windowed");
@@ -238,6 +237,7 @@ export function createScreenBrave(
     },
     dispose() {
       clearTimeout(closeTimer);
+      tabs.dispose();
       root.remove();
     },
   };

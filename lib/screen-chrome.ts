@@ -1,10 +1,10 @@
 import { claudeLogo } from "@/lib/screen-app-icons";
+import { createScreenTabs, type ScreenTabs, type TabSpec } from "@/lib/screen-tabs";
 import { WINDOW_ICONS } from "@/lib/window-controls";
 
 /** What the Chrome window is doing, as far as the desktop is concerned. */
 export type ChromeState = "open" | "minimised" | "closed";
 type WindowState = "full" | "windowed" | "minimised" | "closed";
-type TabId = "slipdesk" | "claude";
 
 const icon = (body: string, size = 17) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
@@ -43,25 +43,14 @@ const FAVICONS = {
   claude: claudeLogo(14),
 } as const;
 
-type Tab = {
-  id: TabId;
-  title: string;
-  url: string;
-  /** Shown before the address, like Chrome does for a file on this computer. */
-  chip?: string;
-  /** The page, as a picture (nothing in it is live). */
-  shot: string;
-  /** "cover" fills the pane; "width" fits the picture's width and lets the pane colour show below it. */
-  fit: "cover" | "width";
-};
-
-/** The SlipDesk path and the Claude address are made up (a placeholder user, like the Recycle Bin). */
-const TABS: readonly Tab[] = [
+/** The SlipDesk path and the Claude address are made up (a placeholder user, like the Recycle Bin). Both pages are pictures; anything else a visitor opens is live. */
+const TABS: readonly TabSpec[] = [
   {
     id: "slipdesk",
     title: "Oyo State 2026 Compulsory Exam",
     url: "C:/Users/dev/Documents/WEB DEVS/SlipDesk/slip-desk.html#log",
     chip: "File",
+    favicon: FAVICONS.slipdesk,
     shot: "/images/chrome/page-slipdesk.webp",
     fit: "cover",
   },
@@ -69,6 +58,7 @@ const TABS: readonly Tab[] = [
     id: "claude",
     title: "Building a multi-app desktop prototype",
     url: "claude.ai/chat/7f3a1c52-0d4e-4b9a-8e21-5c6d9b2a41f0",
+    favicon: FAVICONS.claude,
     shot: "/images/brave/page-claude.webp",
     fit: "width",
   },
@@ -107,10 +97,11 @@ type ChromeOptions = {
 };
 
 /**
- * A static Chrome window for the simulated Windows desktop, dressed like the
- * dark Chrome in the reference screenshot. Two tabs (the SlipDesk page and a
- * Claude chat) switch when pressed; each page is a picture, so nothing in it
- * is live. Closing resets it to the first tab.
+ * A Chrome window for the simulated Windows desktop, dressed like the dark
+ * Chrome in the reference screenshot. It starts with two tabs (the SlipDesk
+ * page and a Claude chat), each a picture. Browsing is real (lib/screen-tabs.ts):
+ * tabs open, close and switch, and any web link typed in the address bar loads
+ * as a live page. Closing the window puts the two starting tabs back.
  */
 export function createScreenChrome(
   parent: HTMLElement,
@@ -133,16 +124,12 @@ export function createScreenChrome(
   win.innerHTML = `
     <div class="ch-tabs">
       <span class="ch-tablist">${ICONS.chevron}</span>
-      ${TABS.map(
-        (tab) =>
-          `<button type="button" tabindex="-1" class="ch-tab" data-tab="${tab.id}"><span class="ch-fav">${FAVICONS[tab.id]}</span><span class="ch-tab-title">${esc(tab.title)}</span><i aria-hidden="true">×</i></button>`,
-      ).join("")}
       <span class="ch-tab-add">${ICONS.plus}</span>
       <span class="ch-gemini">${ICONS.gemini}<b>Ask Gemini</b></span>
       <span class="ch-controls">${controls}</span>
     </div>
     <div class="ch-bar">
-      <span class="ch-nav"><span class="ch-tool">${ICONS.back}</span><span class="ch-tool" data-dim>${ICONS.forward}</span><span class="ch-tool">${ICONS.reload}</span></span>
+      <span class="ch-nav"><span class="ch-tool" data-nav="back" data-dim>${ICONS.back}</span><span class="ch-tool" data-nav="forward" data-dim>${ICONS.forward}</span><span class="ch-tool" data-nav="reload">${ICONS.reload}</span></span>
       <div class="ch-url"><span class="ch-lead"></span><span class="ch-url-text"></span><span class="ch-star">${ICONS.star}</span></div>
       <span class="ch-tool">${ICONS.puzzle}</span>
       <i class="ch-divider"></i>
@@ -150,32 +137,26 @@ export function createScreenChrome(
       <span class="ch-tool">${ICONS.kebab}</span>
     </div>
     <div class="ch-marks"><span class="ch-tool">${ICONS.apps}</span><i class="ch-divider"></i><span class="ch-marks-all">${ICONS.folder}<b>All Bookmarks</b></span></div>
-    <div class="ch-page">${TABS.map(
-      (tab) =>
-        `<div class="ch-pane" data-pane="${tab.id}" data-fit="${tab.fit}"><img class="ch-shot" src="${tab.shot}" alt="" draggable="false" /></div>`,
-    ).join("")}</div>`;
+    <div class="ch-page"></div>`;
   parent.appendChild(root);
 
   const lead = win.querySelector<HTMLElement>(".ch-lead")!;
-  const urlText = win.querySelector<HTMLElement>(".ch-url-text")!;
   const maximise = win.querySelector<HTMLElement>('[data-control="maximise"]')!;
 
-  function setTab(id: TabId) {
-    const tab = TABS.find((entry) => entry.id === id) ?? TABS[0];
-    win.querySelectorAll<HTMLElement>("[data-tab]").forEach((node) => {
-      if (node.dataset.tab === tab.id) node.dataset.active = "";
-      else delete node.dataset.active;
-    });
-    win.querySelectorAll<HTMLElement>("[data-pane]").forEach((pane) => {
-      if (pane.dataset.pane === tab.id) pane.dataset.on = "";
-      else delete pane.dataset.on;
-    });
-    lead.innerHTML = tab.chip
-      ? `<span class="ch-chip">${ICONS.info}<b>${esc(tab.chip)}</b></span>`
-      : `<span class="ch-tune">${ICONS.tune}</span>`;
-    urlText.textContent = tab.url;
-  }
-  setTab(TABS[0].id);
+  // Tabs, the address bar, back, forward and reload live in the shared engine.
+  const tabs: ScreenTabs = createScreenTabs(win, {
+    prefix: "ch",
+    specs: TABS,
+    shotMarkup: (spec) =>
+      `<img class="ch-shot" src="${spec.shot}" alt="" draggable="false" />`,
+    onPage: ({ chip }) => {
+      lead.innerHTML = chip
+        ? `<span class="ch-chip">${ICONS.info}<b>${esc(chip)}</b></span>`
+        : `<span class="ch-tune">${ICONS.tune}</span>`;
+    },
+    // Closing the last tab closes the window, like a real browser.
+    onEmpty: () => set("closed"),
+  });
 
   // ---- Window state ---------------------------------------------------------
   let state: WindowState = "closed";
@@ -206,10 +187,12 @@ export function createScreenChrome(
     root.dataset.window = next;
     root.inert = hidden();
     maximise.innerHTML = next === "full" ? WINDOW_ICONS.restore : WINDOW_ICONS.maximise;
+    // Sites only load while the window is on show.
+    tabs.setVisible(!hidden());
     // A closed window starts over once it has shrunk away.
     if (next === "closed")
       closeTimer = setTimeout(() => {
-        if (state === "closed") setTab(TABS[0].id);
+        if (state === "closed") tabs.reset();
       }, 600);
     onChange(next === "closed" ? "closed" : next === "minimised" ? "minimised" : "open");
   }
@@ -220,10 +203,9 @@ export function createScreenChrome(
   };
 
   root.addEventListener("click", (event) => {
-    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-tab],[data-control]");
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-control]");
     if (!hit) return;
-    if (hit.dataset.tab) setTab(hit.dataset.tab as TabId);
-    else if (hit.dataset.control === "minimise") set("minimised");
+    if (hit.dataset.control === "minimise") set("minimised");
     else if (hit.dataset.control === "close") set("closed");
     else if (hit.dataset.control === "maximise") {
       if (state === "full") set("windowed");
@@ -241,6 +223,7 @@ export function createScreenChrome(
     },
     dispose() {
       clearTimeout(closeTimer);
+      tabs.dispose();
       root.remove();
     },
   };

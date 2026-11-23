@@ -198,6 +198,8 @@ type DesktopHandlers = {
   onBin: () => void;
   /** The Recycle Bin desktop icon was double-clicked. */
   onOpenBin: () => void;
+  /** The 3D Prototypes desktop icon was double-clicked. */
+  onOpenPrototypes?: () => void;
   /** The VLC taskbar button was pressed. */
   onVlc?: () => void;
   /** The VLC media player desktop icon was double-clicked. */
@@ -242,6 +244,7 @@ export function createScreenDesktop(
     onOpenGranola,
     onBin,
     onOpenBin,
+    onOpenPrototypes,
     onVlc,
     onOpenVlc,
     onChrome,
@@ -275,6 +278,7 @@ export function createScreenDesktop(
   let braveIcon: HTMLButtonElement | undefined;
   let granolaIcon: HTMLButtonElement | undefined;
   let binIcon: HTMLButtonElement | undefined;
+  let prototypesIcon: HTMLButtonElement | undefined;
   let vlcIcon: HTMLButtonElement | undefined;
   let chromeIcon: HTMLButtonElement | undefined;
   let chromeCell = 0;
@@ -312,6 +316,7 @@ export function createScreenDesktop(
     braveIcon = desktopIcons[DESKTOP_ICONS.indexOf("Brave")];
     granolaIcon = desktopIcons[DESKTOP_ICONS.indexOf("Granola")];
     binIcon = desktopIcons[DESKTOP_ICONS.indexOf("Recycle Bin")];
+    prototypesIcon = desktopIcons[DESKTOP_ICONS.indexOf("3D Prototypes")];
     vlcIcon = desktopIcons[DESKTOP_ICONS.indexOf("VLC media player")];
     // Microsoft Edge opens the same browser window as Temms Tech and the Edge taskbar button.
     edgeIcon = desktopIcons[DESKTOP_ICONS.indexOf("Microsoft Edge")];
@@ -528,6 +533,7 @@ export function createScreenDesktop(
       if (again && icon === braveIcon) onOpenBrave();
       if (again && icon === granolaIcon) onOpenGranola();
       if (again && icon === binIcon) onOpenBin();
+      if (again && icon === prototypesIcon) onOpenPrototypes?.();
       if (again && icon === vlcIcon) onOpenVlc?.();
       if (again && icon === chromeIcon) onOpenChrome?.();
       if (again && icon === claudeIcon) onOpenClaude?.();

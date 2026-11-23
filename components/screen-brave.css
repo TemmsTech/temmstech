@@ -305,3 +305,179 @@
   font-size: calc(var(--u) * 9);
   place-items: center;
 }
+
+/* ---- Live browsing (lib/screen-tabs.ts) ------------------------------------------
+   Tabs open and close, any web link loads as a live page, and a shield keeps the
+   page scrolling until the visitor clicks into a site. */
+.br-tab {
+  flex: 0 1 202px;
+  min-width: 34px;
+}
+.br-tab-x {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  line-height: 1;
+}
+.br-tab-x:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+.br-tab-add {
+  cursor: pointer;
+}
+.br-tab-add[data-dim] {
+  opacity: 0.4;
+}
+.br-tool[data-nav] {
+  cursor: pointer;
+}
+.br-letter {
+  display: grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  border-radius: 50%;
+  background: #5f6368;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+}
+.br-url {
+  position: relative;
+  cursor: text;
+}
+.br-window .br-url-input {
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  user-select: text;
+  cursor: text;
+}
+.br-url-input[hidden],
+.br-url-text[hidden] {
+  display: none;
+}
+.br-url[data-invalid] {
+  box-shadow: inset 0 0 0 1px #f28b82;
+}
+.br-url[data-invalid]::after {
+  content: attr(data-invalid);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 6;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #39393b;
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+  pointer-events: none;
+}
+.br-pane[data-kind="site"],
+.br-pane[data-kind="blank"] {
+  background: #07111f;
+}
+.br-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+.br-pane .live-frame-loading {
+  background: #07111f;
+}
+.br-pane .live-frame-loading[data-loaded] {
+  background: transparent;
+}
+.br-newtab {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 6px;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.br-newtab b {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 400;
+}
+.br-newtab span {
+  color: #9aa0a6;
+  font-size: 12px;
+}
+.br-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+.br-shield[hidden],
+.br-external[hidden] {
+  display: none;
+}
+.br-window[data-engaged] .br-shield {
+  pointer-events: none;
+}
+.br-shield::after {
+  content: "Click to interact";
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #fff;
+  background: rgb(7 17 31 / 0.82);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.br-shield:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+/* Many sites refuse to be framed and nothing can detect that, so every live page offers its real tab. */
+.br-window button.br-external {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 3;
+  padding: 4px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(7 17 31 / 0.78);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.br-window button.br-external:hover {
+  opacity: 1;
+  background: rgb(7 17 31 / 0.95);
+}
+.br-tab:hover i {
+  display: block;
+}
