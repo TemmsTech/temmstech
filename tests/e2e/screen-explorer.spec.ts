@@ -41,7 +41,7 @@ test("the laptop's File Explorer button opens a window that hands over to VS Cod
   await expect(code.locator(".vs-tab-name")).toHaveText("AboutHero.jsx");
 });
 
-test("double-clicking the 3D Prototypes desktop icon opens File Explorer on an empty folder", async ({
+test("double-clicking the 3D Prototypes desktop icon opens File Explorer on the prototypes folder", async ({
   page,
 }) => {
   test.setTimeout(90000);
@@ -60,13 +60,26 @@ test("double-clicking the 3D Prototypes desktop icon opens File Explorer on an e
   // One click only selects it.
   await press();
   await expect(explorer).toHaveAttribute("data-window", "closed");
-  // The second click soon after opens File Explorer on the empty folder.
+  // The second click soon after opens File Explorer on the folder.
   await press();
   await expect(explorer).toHaveAttribute("data-window", "full");
   await expect(button).toHaveAttribute("data-state", "open");
   await expect(explorer.locator(".ex-tab[data-active=\"true\"] .ex-tab-title")).toHaveText(
     "3D Prototypes",
   );
-  await expect(explorer.locator(".ex-empty")).toHaveText("This folder is empty.");
-  await expect(explorer.locator(".ex-count")).toHaveText("0 items");
+  await expect(explorer.locator(".ex-count")).toHaveText("11 items");
+  await expect(explorer.locator(".ex-item")).toHaveCount(11);
+  // Folders open like real ones: GLBs holds 31 models, and Up goes back.
+  const open = async (name: string) => {
+    const item = explorer.locator(`.ex-item[data-id="${name}"]`);
+    await item.click();
+    await item.click();
+  };
+  await open("GLBs");
+  await expect(explorer.locator(".ex-count")).toHaveText("31 items");
+  await explorer.locator('[data-nav="up"]').click();
+  await expect(explorer.locator(".ex-count")).toHaveText("11 items");
+  await open("Build");
+  await open("TShirt Logo Project");
+  await expect(explorer.locator(".ex-count")).toHaveText("11 items");
 });

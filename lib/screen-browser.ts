@@ -365,7 +365,7 @@ export function createScreenBrowser(
         onOpenGranola: () => granola?.open(),
         onBin: () => toggleApp("bin", bin),
         onOpenBin: () => bin?.open(),
-        // 3D Prototypes is an empty folder: File Explorer opens on it, like a real folder on the desktop.
+        // 3D Prototypes: File Explorer opens on it, with the same folders and thumbnails as the real one.
         onOpenPrototypes: () => explorer?.openPlace("3D Prototypes"),
         // VLC: the taskbar button opens it or sends it away; a double-click on the icon opens it.
         onVlc: () => {

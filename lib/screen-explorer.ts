@@ -1,5 +1,10 @@
 import { isScreenFile } from "@/lib/screen-files";
 import { WINDOW_ICONS } from "@/lib/window-controls";
+import {
+  PROTOTYPE_IMAGES,
+  PROTOTYPE_PLACES,
+  PROTOTYPE_SYNCED,
+} from "@/lib/screen-prototypes";
 
 /** What the File Explorer window is doing, as far as the desktop is concerned. */
 export type ExplorerState = "open" | "minimised" | "closed";
@@ -26,6 +31,10 @@ type Entry = {
   size?: string;
   /** Path from the project root; VS Code can show it if it is in SCREEN_FILES. */
   file?: string;
+  /** A picture that stands in for the icon (the real Windows thumbnail). */
+  thumb?: string;
+  /** Shows the green "synced" tick before the name. */
+  synced?: boolean;
 };
 
 const dir = (name: string, date: string): Entry => ({
@@ -160,7 +169,16 @@ const LIB: [string, number][] = [
 ];
 
 /** Every folder a visitor can open, keyed by its path ("root" is the project itself). */
-type Place = { title: string; path: string[]; items: Entry[]; view: "details" | "icons" };
+type Place = {
+  title: string;
+  path: string[];
+  items: Entry[];
+  view: "details" | "icons";
+  /** Own address-bar start (e.g. OneDrive > Desktop) instead of Documents > Temms Tech. */
+  trail?: string[];
+  /** Big picture thumbnails with names that wrap, like the real folder. */
+  thumbs?: boolean;
+};
 const ROOT = "root";
 const placeId = (path: string[]) => (path.length ? path.join("/") : ROOT);
 
@@ -185,6 +203,29 @@ for (const name of APP_DIRS) {
     view: "icons",
   };
 }
+// The 3D Prototypes folder from the desktop, with its real thumbnails.
+for (const [id, entries] of Object.entries(PROTOTYPE_PLACES)) {
+  const path = id.split("/");
+  PLACES[id] = {
+    title: path[path.length - 1],
+    path,
+    trail: ["OneDrive", "makinde - Personal", "Desktop"],
+    thumbs: true,
+    view: "icons",
+    items: entries.map(([name, picture, folder]) => ({
+      id: name,
+      name,
+      kind: folder ? "folder" : "file",
+      date: "11/23/2026 4:22 PM",
+      type: folder ? "File folder" : "File",
+      thumb: `${PROTOTYPE_IMAGES}${picture}.webp`,
+      synced: PROTOTYPE_SYNCED.has(id),
+    })),
+  };
+}
+/** The folder one level up, or nothing at the top of a trail. */
+const parentOf = (found: Place) =>
+  found.path.length > (found.trail ? 1 : 0) ? placeId(found.path.slice(0, -1)) : undefined;
 /** Any other folder opens as an empty one. */
 function placeOf(id: string): Place {
   if (PLACES[id]) return PLACES[id];
@@ -230,7 +271,9 @@ const imageBig = `<span class="ex-img"><img src="${LOGO}" alt="" draggable="fals
 const smallIcon = (entry: Entry) =>
   entry.kind === "folder" ? FOLDER_SM : fileSmall(entry.kind);
 const bigIcon = (entry: Entry) =>
-  entry.kind === "folder"
+  entry.thumb
+    ? `<img class="ex-thumb" src="${entry.thumb}" alt="" draggable="false">`
+    : entry.kind === "folder"
     ? FOLDER_BIG
     : entry.kind === "image"
       ? imageBig
@@ -485,25 +528,29 @@ export function createScreenExplorer(
   }
 
   function render() {
-    const { title, path, items, view } = placeOf(place);
+    const found = placeOf(place);
+    const { title, path, items, view } = found;
     tabTitle.textContent = title;
     searchText.textContent = `Search ${title}`;
+    const trail = found.trail ?? ["Documents", "Temms Tech"];
     crumbs.innerHTML =
-      ["Documents", "Temms Tech", ...path]
+      [...trail, ...path]
         .map((name, index) =>
           index === 0
-            ? `<span class="ex-crumb" data-lead>${name}</span><span class="ex-crumb ex-crumb-more">…</span>`
-            : `<span class="ex-crumb" data-place="${placeId(path.slice(0, index - 1))}">${esc(name)}</span>`,
+            ? `<span class="ex-crumb" data-lead>${esc(name)}</span><span class="ex-crumb ex-crumb-more">…</span>`
+            : index < trail.length
+              ? `<span class="ex-crumb"${found.trail ? "" : ` data-place="${ROOT}"`}>${esc(name)}</span>`
+              : `<span class="ex-crumb" data-place="${placeId(path.slice(0, index - trail.length + 1))}">${esc(name)}</span>`,
         )
         .map((crumb) => `<i>›</i>${crumb}`)
         .join("") + "<i>›</i>";
     navBack.dataset.off = String(history.length === 0);
     navForward.dataset.off = String(forward.length === 0);
-    navUp.dataset.off = String(place === ROOT);
-    const lead = path.length && panePlaces.has(path[0]) ? path[0] : ROOT;
+    navUp.dataset.off = String(parentOf(found) === undefined);
+    const lead = found.trail ? "" : path.length && panePlaces.has(path[0]) ? path[0] : ROOT;
     for (const node of pane.querySelectorAll<HTMLElement>("[data-place]"))
       node.dataset.selected = String(node.dataset.place === lead);
-    count.textContent = `${items.length} items`;
+    count.textContent = `${items.length} ${items.length === 1 ? "item" : "items"}`;
 
     clip = rows = undefined;
     if (!items.length) {
@@ -520,13 +567,16 @@ export function createScreenExplorer(
       clip = content.querySelector<HTMLElement>(".ex-clip")!;
       rows = content.querySelector<HTMLElement>(".ex-rows")!;
     } else {
-      content.innerHTML = `<div class="ex-grid">${items
+      content.innerHTML = `<div class="ex-clip" data-grid><div class="ex-rows"><div class="ex-grid"${found.thumbs ? " data-thumbs" : ""}>${items
         .map(
           (item) =>
-            `<div class="ex-item" data-id="${esc(item.id)}"><span class="ex-big">${bigIcon(item)}</span><span class="ex-label">${esc(item.name)}</span></div>`,
+            `<div class="ex-item" data-id="${esc(item.id)}"><span class="ex-big">${bigIcon(item)}</span><span class="ex-label">${item.synced ? '<i class="ex-synced"></i>' : ""}${esc(item.name)}</span></div>`,
         )
-        .join("")}</div>`;
+        .join("")}</div></div></div>`;
+      clip = content.querySelector<HTMLElement>(".ex-clip")!;
+      rows = content.querySelector<HTMLElement>(".ex-rows")!;
     }
+    scrollbar.dataset.view = view;
     content.dataset.view = items.length ? view : "empty";
     scrollY = 0;
     scrollbar.dataset.show = "false";
@@ -574,8 +624,8 @@ export function createScreenExplorer(
     if (next) go(next, "forward");
   };
   const goUp = () => {
-    const { path } = placeOf(place);
-    if (path.length) go(placeId(path.slice(0, -1)));
+    const up = parentOf(placeOf(place));
+    if (up !== undefined) go(up);
   };
 
   function reset() {

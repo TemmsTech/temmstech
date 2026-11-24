@@ -461,6 +461,46 @@
   height: 32px;
   object-fit: contain;
 }
+/* Folder of thumbnails (3D Prototypes): bigger pictures, names that wrap, scrolls. */
+.ex-clip[data-grid] {
+  position: absolute;
+  inset: 0;
+}
+.ex-scrollbar[data-view="icons"] {
+  top: 4px;
+}
+.ex-grid[data-thumbs] .ex-item {
+  height: auto;
+  min-height: 98px;
+  padding-bottom: 6px;
+}
+.ex-grid[data-thumbs] .ex-big {
+  height: 72px;
+}
+.ex-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.ex-grid[data-thumbs] .ex-label {
+  display: -webkit-box;
+  max-width: 98px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-align: center;
+  white-space: normal;
+  word-break: break-all;
+}
+.ex-synced {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: #3fae5a;
+  vertical-align: -1px;
+}
 .ex-item .ex-label {
   max-width: 100px;
   overflow: hidden;

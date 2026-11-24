@@ -58,7 +58,7 @@ const DESKTOP_ICONS = [
 // filter), then delete app/scratch.
 const TRIMMED_ICONS: ReadonlySet<string> = new Set([
   "UltraISO", "PowerISO", "Foxit PDF Reader", "HandBrake", "Makinde - Chrome",
-  "Google Docs", "Google Sheets", "Google Slides", "3D Prototypes", "Adobe Express",
+  "Google Docs", "Google Sheets", "Google Slides", "Adobe Express",
 ]);
 const trimmedDesktop = onScratch;
 /** Cells of the taskbar sprite (public/images/desktop/taskbar-icons.png). */
