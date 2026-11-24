@@ -1,0 +1,1035 @@
+/* Desktop behind the browser window on the laptop and tablet screens
+   (lib/screen-desktop.ts, lib/screen-browser.ts). Same 1280px layout units as
+   .screen-browser. Only transforms and opacity animate. */
+
+.screen-browser[data-desktop="windows"] {
+  --desk-top: 0px;
+  --desk-bottom: 48px;
+}
+.screen-browser[data-desktop="mac"] {
+  --desk-top: 32px;
+  --desk-bottom: 96px;
+}
+/* ---- The window ---------------------------------------------------------- */
+.screen-window {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ink);
+  border-radius: 0;
+  transform-origin: 50% 50%;
+  transform: translate(0px, 0px) scale(1);
+  will-change: transform;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 300ms var(--ease-out),
+    bottom 420ms var(--ease-out),
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+/* A full-size window stops above the taskbar whenever the video has left the
+   big player (mini window, minimised or closed), so the taskbar and its video
+   button never hide behind the browser. */
+.screen-browser[data-window="full"]:is([data-video="mini"], [data-video="docked"], [data-video="closed"])
+  .screen-window {
+  bottom: var(--desk-bottom, 0px);
+}
+.screen-browser[data-window="windowed"] .screen-window {
+  transform: translate(0px, calc((var(--desk-top) - var(--desk-bottom)) / 2))
+    scale(0.78);
+  border-radius: 14px;
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(255 255 255 / 0.12);
+}
+/* Minimised and closed look the same: the window shrinks into the taskbar
+   button (--min-x / --min-y are set by the script) and hides. */
+.screen-browser:is([data-window="minimised"], [data-window="closed"])
+  .screen-window {
+  transform: translate(var(--min-x, 0px), var(--min-y, 0px)) scale(0.05);
+  border-radius: 14px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--ease-out),
+    opacity 260ms var(--ease-out) 160ms,
+    border-radius 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    visibility 0s linear 420ms;
+}
+
+/* ---- Window buttons (top right of the tab strip) -------------------------- */
+.screen-browser .screen-browser-controls {
+  pointer-events: auto;
+}
+.screen-browser button.screen-browser-control {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  cursor: default;
+  transition: background-color 150ms ease;
+}
+.screen-browser button.screen-browser-control:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.screen-browser button.screen-browser-control[data-control="close"]:hover {
+  background: #e81123;
+}
+.screen-browser button.screen-browser-control svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Desktop -------------------------------------------------------------- */
+.screen-desktop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 15px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 80% at 26% 16%, rgb(3 178 250 / 0.5), transparent 62%),
+    radial-gradient(ellipse 80% 70% at 80% 84%, rgb(22 75 197 / 0.7), transparent 64%),
+    linear-gradient(160deg, #0b2a52 0%, var(--ink) 72%);
+}
+.screen-desktop button {
+  font-family: inherit;
+  color: inherit;
+}
+
+.screen-desktop-icons {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.screen-desktop[data-style="mac"] .screen-desktop-icons {
+  top: 48px;
+  right: 16px;
+  left: auto;
+}
+.screen-desktop-icon {
+  display: flex;
+  width: 96px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.2;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.8);
+  cursor: default;
+  pointer-events: auto;
+}
+.screen-desktop-icon:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.screen-desktop-icon[data-selected="true"] {
+  border-color: rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.18);
+}
+.screen-desktop-glyph {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+}
+.screen-desktop-glyph svg,
+.screen-desktop-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.screen-desktop-label {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Browser button on the taskbar or dock, with a running indicator. */
+.screen-desktop-app {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  pointer-events: auto;
+}
+.screen-desktop-app-icon {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+.screen-desktop-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.6);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.screen-desktop-app:is([data-state="open"], [data-state="minimised"])
+  .screen-desktop-dot {
+  opacity: 1;
+}
+.screen-desktop-app[data-state="open"] .screen-desktop-dot {
+  background: var(--brand);
+  transform: scaleX(1);
+}
+.screen-desktop-app[hidden] {
+  display: none;
+}
+
+.screen-clock {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* ---- Windows 11 ------------------------------------------------------------ */
+.screen-taskbar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+.screen-taskbar-centre {
+  display: flex;
+  gap: 6px;
+}
+.screen-taskbar-item,
+.screen-taskbar .screen-desktop-app {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+.screen-taskbar-item {
+  display: grid;
+  padding: 9px;
+  place-items: center;
+}
+.screen-taskbar .screen-desktop-app {
+  color: var(--brand);
+}
+.screen-taskbar .screen-desktop-video {
+  color: var(--foreground);
+}
+.screen-taskbar .screen-desktop-app:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.screen-taskbar .screen-clock {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  bottom: 0;
+  justify-content: center;
+  text-align: right;
+}
+
+/* ---- macOS ----------------------------------------------------------------- */
+.screen-menubar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 32px;
+  align-items: center;
+  gap: 22px;
+  padding: 0 18px;
+  background: rgb(7 17 31 / 0.55);
+  font-size: 15px;
+}
+.screen-menubar-apple {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.screen-menubar .screen-clock {
+  flex-direction: row;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 14px;
+}
+.screen-dock {
+  position: absolute;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  display: flex;
+  width: max-content;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 24px;
+  background: rgb(255 255 255 / 0.14);
+}
+.screen-dock-item,
+.screen-dock .screen-desktop-app {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+}
+.screen-dock-item {
+  display: block;
+}
+.screen-dock-bin {
+  padding: 12px;
+  color: #fff;
+  background: rgb(255 255 255 / 0.12);
+}
+.screen-dock .screen-desktop-app {
+  color: #fff;
+  background: linear-gradient(160deg, #1f6fe0, var(--brand));
+}
+.screen-dock .screen-desktop-video {
+  background: linear-gradient(160deg, #3b3b42, #141418);
+}
+.screen-dock .screen-desktop-app-icon {
+  width: 36px;
+  height: 36px;
+}
+.screen-dock .screen-desktop-dot {
+  bottom: -8px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+}
+/* The dock marks a running app with a plain dot, open or minimised. */
+.screen-desktop[data-style="mac"] .screen-desktop-dot {
+  background: rgb(255 255 255 / 0.85);
+  transform: none;
+}
+
+/* ---- Video player: minimises to a corner mini player, then into its taskbar button */
+/* The mini window sits in the bottom-right corner, clear of the taskbar. */
+.screen-player-layer[data-dock="taskbar"]:is([data-state="mini"], [data-state="docked"])
+  .screen-player {
+  top: calc(100% - var(--desk-bottom, 48px) - 16px);
+  left: calc(100% - 28px);
+}
+.screen-player-layer[data-dock="taskbar"][data-state="mini"] .screen-player {
+  transform: translate(-100%, -100%);
+}
+.screen-player-layer[data-dock="taskbar"] .screen-player-dock {
+  display: none;
+}
+/* Closed (the close button) leaves the same way minimised does: it shrinks
+   into the taskbar button, which stays pinned there with no running dot. */
+.screen-player-layer[data-dock="taskbar"]:is([data-state="docked"], [data-state="closed"])
+  .screen-player {
+  left: var(--dock-x, 50%);
+  top: var(--dock-y, 100%);
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  box-shadow: none;
+  outline-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%) scale(0.05);
+}
+
+/* ---- Video player controls, Apple style -------------------------------------
+   A frosted capsule floating over the video: times and scrubber on top,
+   transport below. */
+.screen-hud {
+  position: absolute;
+  right: 0;
+  bottom: 26px;
+  left: 0;
+  width: min(640px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 14px 24px 10px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 28px;
+  color: #fff;
+  background: rgb(28 30 36 / 0.62);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+}
+.screen-hud-times {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.screen-hud-time {
+  flex: none;
+  min-width: 46px;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.screen-hud-time:last-child {
+  text-align: right;
+}
+.screen-hud-track {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+.screen-hud-rail {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.28);
+  pointer-events: none;
+  transition: transform 160ms var(--ease-out);
+}
+.screen-hud-track:hover .screen-hud-rail {
+  transform: scaleY(1.5);
+}
+.screen-hud-fill {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-hud-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms var(--ease-out);
+}
+.screen-hud-track:hover .screen-hud-thumb {
+  opacity: 1;
+}
+.screen-hud-buttons {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+.screen-hud-transport {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.screen-player .screen-hud-btn {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  padding: 9px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.screen-player .screen-hud-btn:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+.screen-player .screen-hud-play {
+  width: 58px;
+  height: 58px;
+  padding: 12px;
+}
+.screen-player .screen-hud-mute {
+  justify-self: start;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+}
+.screen-hud-btn span {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.screen-hud-play .icon-pause,
+.screen-hud-play[data-playing="true"] .icon-play {
+  display: none;
+}
+.screen-hud-play[data-playing="true"] .icon-pause {
+  display: block;
+}
+.screen-hud-mute[data-muted="true"] .icon-on,
+.screen-hud-mute[data-muted="false"] .icon-off {
+  display: none;
+}
+/* Nudge to turn sound on: while the video plays muted, a soft cyan ring pulses
+   around the mute button (the VLC skin uses .vlc-mute, so it never matches).
+   The first press sets data-nudged, which ends it for the rest of the visit.
+   The ::after is out of flow, so the button's layout does not move. */
+.screen-player .screen-hud-mute {
+  position: relative;
+}
+.screen-player-layer:is([data-state="open"], [data-state="mini"])
+  .screen-hud-mute[data-muted="true"]:not([data-nudged="true"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--brand);
+  opacity: 0;
+  pointer-events: none;
+  animation: screen-hud-mute-pulse 1500ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+@keyframes screen-hud-mute-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+/* Reduced motion: no animation, a static highlight ring instead. */
+@media (prefers-reduced-motion: reduce) {
+  .screen-player-layer:is([data-state="open"], [data-state="mini"])
+    .screen-hud-mute[data-muted="true"]:not([data-nudged="true"])::after {
+    animation: none;
+    opacity: 0.8;
+    transform: none;
+  }
+}
+/* The small corner window (phones) gets a slimmer capsule. */
+.screen-player-layer:is([data-state="mini"], [data-state="docked"]) .screen-hud {
+  bottom: 8px;
+  width: calc(100% - 16px);
+  padding: 6px 12px 4px;
+  border-radius: 18px;
+}
+.screen-player-layer:is([data-state="mini"], [data-state="docked"]) .screen-hud-time {
+  min-width: 34px;
+  font-size: 11px;
+}
+.screen-player-layer:is([data-state="mini"], [data-state="docked"])
+  :is(.screen-hud-btn) {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+}
+.screen-player-layer:is([data-state="mini"], [data-state="docked"]) .screen-hud-play {
+  width: 38px;
+  height: 38px;
+  padding: 8px;
+}
+.screen-player-layer:is([data-state="mini"], [data-state="docked"]) .screen-hud-transport {
+  gap: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-window,
+  .screen-desktop * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---- Windows 11 desktop, laid out like the real laptop -------------------- */
+.screen-desktop[data-style="windows"] {
+  background: #06101f url("/images/desktop/wallpaper.jpg") right center / cover
+    no-repeat;
+}
+.screen-sprite {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+}
+.screen-sprite[data-sheet="desk"] {
+  background-image: url("/images/desktop/desktop-icons.png");
+  background-size: 2100% 100%;
+  background-position: calc(var(--i) * 5%) 0;
+}
+.screen-sprite[data-sheet="bar"] {
+  background-image: url("/images/desktop/taskbar-icons.png");
+  background-size: 1400% 100%;
+  background-position: calc(var(--i) * 7.6923%) 0;
+}
+
+/* Columns of eight, filled top to bottom. */
+.screen-desktop[data-style="windows"] .screen-desktop-icons {
+  top: 6px;
+  left: 6px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(8, 82px);
+  grid-auto-columns: 74px;
+  gap: 0;
+}
+.screen-desktop[data-style="windows"] .screen-desktop-icon {
+  width: 74px;
+  height: 82px;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 5px 2px 2px;
+  font-size: 11.5px;
+}
+.screen-desktop[data-style="windows"] .screen-desktop-glyph {
+  width: 40px;
+  height: 40px;
+}
+.screen-desktop[data-style="windows"] .screen-desktop-label {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  text-align: center;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.screen-taskbar {
+  height: 48px;
+  justify-content: center;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+  background: rgb(24 33 49 / 0.94);
+}
+.screen-taskbar-centre {
+  align-items: center;
+  gap: 2px;
+}
+.screen-taskbar-item,
+.screen-taskbar .screen-desktop-app {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+.screen-taskbar-item {
+  padding: 5px;
+}
+.screen-taskbar .screen-desktop-app-icon {
+  width: 26px;
+  height: 26px;
+}
+.screen-taskbar .screen-desktop-video {
+  color: var(--foreground);
+}
+.screen-taskbar .screen-desktop-video .screen-desktop-app-icon {
+  width: 26px;
+  height: 26px;
+}
+.screen-taskbar .screen-desktop-dot {
+  bottom: 2px;
+  width: 14px;
+}
+.screen-taskbar-item .screen-sprite {
+  width: 26px;
+  height: 26px;
+}
+.screen-taskbar-search {
+  display: flex;
+  width: 150px;
+  height: 32px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 6px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.07);
+  color: rgb(255 255 255 / 0.85);
+  font-size: 13px;
+}
+.screen-taskbar-search-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.screen-weather {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 14px;
+  display: grid;
+  grid-template-columns: 28px auto;
+  grid-template-rows: 1fr 1fr;
+  column-gap: 8px;
+  align-content: center;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.screen-weather-icon {
+  display: block;
+  grid-row: 1 / 3;
+  width: 28px;
+  height: 28px;
+  align-self: center;
+}
+.screen-weather-sky {
+  color: rgb(255 255 255 / 0.7);
+}
+.screen-tray {
+  position: absolute;
+  top: 0;
+  right: 104px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.screen-tray-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: rgb(255 255 255 / 0.9);
+}
+.screen-taskbar .screen-clock {
+  right: 14px;
+  font-size: 12px;
+}
+
+/* ---- VLC media player window ----------------------------------------------
+   The same video player (lib/screen-video-player.ts) wearing a VLC frame:
+   cone + title bar, menu row, black stage, seek bar, control row.
+   Only the .screen-player--vlc window is styled here; the intro player keeps
+   its Apple-style capsule. Only transforms and opacity animate. */
+.screen-player--vlc {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f0f0f0;
+  color: #1b1b1b;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  border-radius: 8px 8px 0 0;
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(0 0 0 / 0.45);
+}
+
+/* Title bar: cone, "file - VLC media player", then the three window buttons. */
+.vlc-titlebar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+}
+.vlc-cone {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 8px 0 10px;
+  flex: none;
+}
+.vlc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #1b1b1b;
+}
+.vlc-wincontrols {
+  display: flex;
+  height: 100%;
+  flex: none;
+}
+.vlc-win {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1b1b1b;
+  cursor: default;
+}
+.vlc-win svg {
+  width: 12px;
+  height: 12px;
+}
+.vlc-win:hover:not(:disabled) {
+  background: #e6e6e6;
+}
+.vlc-win[data-action="close"]:hover:not(:disabled) {
+  background: #e81123;
+  color: #fff;
+}
+
+/* Menu row. */
+.vlc-menu {
+  display: flex;
+  flex: none;
+  height: 24px;
+  align-items: center;
+  padding: 0 4px;
+  background: #ffffff;
+  border-bottom: 1px solid #e3e3e3;
+}
+.vlc-menu-item {
+  padding: 3px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: default;
+}
+.vlc-menu-item:hover {
+  background: #e5f1fb;
+}
+
+/* The black stage around the <video>. Black while stopped, like VLC. */
+.vlc-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+}
+.vlc-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.screen-player--vlc[data-stopped="true"] .vlc-video {
+  visibility: hidden;
+}
+
+/* Seek bar with elapsed and total time either side. */
+.vlc-bottom {
+  flex: none;
+  padding: 6px 10px 8px;
+  background: #f0f0f0;
+}
+.vlc-seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vlc-time {
+  min-width: 42px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #3a3a3a;
+}
+.vlc-time:last-child {
+  text-align: right;
+}
+.vlc-track {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+.vlc-rail {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #cfcfcf;
+}
+.vlc-fill {
+  width: 100%;
+  height: 100%;
+  background: #ff8800;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.vlc-thumb {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #ff8800;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+
+/* Control row. */
+.vlc-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.vlc-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #2b2b2b;
+  cursor: default;
+}
+.vlc-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.vlc-btn:hover {
+  background: #e1e1e1;
+}
+.vlc-btn[data-active="true"] {
+  color: #ff8800;
+}
+.vlc-play {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ff8800;
+  color: #fff;
+}
+.vlc-play:hover {
+  background: #ff9a26;
+}
+.vlc-play .icon-pause,
+.vlc-play[data-playing="true"] .icon-play {
+  display: none;
+}
+.vlc-play[data-playing="true"] .icon-pause {
+  display: block;
+}
+.vlc-play span {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.vlc-gap {
+  width: 10px;
+  flex: none;
+}
+.vlc-spacer {
+  flex: 1;
+}
+.vlc-mute .icon-off,
+.vlc-mute[data-muted="true"] .icon-on {
+  display: none;
+}
+.vlc-mute[data-muted="true"] .icon-off {
+  display: block;
+}
+.vlc-mute span {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Volume: a wedge with the level written above it (100% when it opens). */
+.vlc-volume-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vlc-volume-label {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  font-size: 10px;
+  color: #5a5a5a;
+}
+.vlc-volume {
+  position: relative;
+  width: 100px;
+  height: 20px;
+  cursor: pointer;
+  touch-action: none;
+}
+.vlc-volume-wedge {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #cfcfcf;
+  clip-path: polygon(0 100%, 100% 100%, 100% 0);
+}
+.vlc-volume-fill {
+  height: 100%;
+  background: #ff8800;
+}
+
+/* Fullscreen fills this window: title bar, menu and controls go; the controls
+   come back while the pointer is over the window. */
+.screen-player--vlc[data-fullscreen="true"] .vlc-titlebar,
+.screen-player--vlc[data-fullscreen="true"] .vlc-menu {
+  display: none;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgb(20 20 20 / 0.85);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.screen-player--vlc[data-fullscreen="true"]:hover .vlc-bottom {
+  opacity: 1;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-time {
+  color: #e8e8e8;
+}
+.screen-player--vlc[data-fullscreen="true"] .vlc-btn:not(.vlc-play) {
+  color: #f1f1f1;
+}
+
+/* Small corner window: keep it readable by hiding the extra buttons. */
+.screen-player-layer[data-state="mini"] .screen-player--vlc .vlc-extra {
+  display: none;
+}
+
+/* The cone on the taskbar button. */
+.screen-taskbar .screen-desktop-vlc .screen-desktop-app-icon {
+  width: 24px;
+  height: 24px;
+}

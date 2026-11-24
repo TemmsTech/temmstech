@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { briefSamples } from "@/data/brief";
+import { useTypingPlaceholder } from "@/hooks";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Arrow } from "@/components/arrow";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,7 @@ export function BriefForm({
   className?: string;
   onClose?: () => void;
 }) {
+  const briefField = useRef<HTMLTextAreaElement>(null);
   const [brief, setBrief] = useState("");
   const [contact, setContact] = useState("");
   const [website, setWebsite] = useState("");
@@ -28,6 +31,8 @@ export function BriefForm({
   const [status, setStatus] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [sending, setSending] = useState(false);
+
+  useTypingPlaceholder(briefField, briefSamples);
 
   function edit(update: () => void) {
     update();
@@ -67,7 +72,10 @@ export function BriefForm({
           type="button"
           onClick={onClose}
           aria-label="Close form"
-          className="glass-close"
+          className={cn(
+            buttonVariants({ variant: "destructive", size: "icon" }),
+            "glass-close",
+          )}
         >
           <svg
             viewBox="0 0 24 24"
@@ -89,16 +97,17 @@ export function BriefForm({
         What would you like to solve?
       </label>
       <p id="brief-help" className="glass-muted mt-2 text-sm leading-6">
-        A few lines about the problem and who it affects are a good start.
+        Tell us what you’d like built and roughly when. Not sure yet? A quick hello is enough.
       </p>
       <textarea
         id="project-brief"
+        ref={briefField}
         aria-describedby="brief-help"
         value={brief}
         onChange={(event) => edit(() => setBrief(event.target.value))}
         rows={5}
-        className="glass-field mt-4 resize-y"
-        placeholder="The problem, the people, and what a better outcome could look like…"
+        className="glass-field mt-4 resize-none"
+        placeholder={briefSamples[0]}
       />
 
       <div className="mt-6">
@@ -115,7 +124,7 @@ export function BriefForm({
           value={contact}
           onChange={(event) => edit(() => setContact(event.target.value))}
           className="glass-field mt-2"
-          placeholder="Email or phone / WhatsApp"
+          placeholder="Email or Phone Number"
         />
         {/* Honeypot: hidden from people, tempting to bots. */}
         <input

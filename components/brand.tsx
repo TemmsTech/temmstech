@@ -17,7 +17,7 @@ export function Brand({
       className={cn("inline-flex min-h-11 items-center gap-3", className)}
     >
       <Image
-        src="/images/brand/logo-mark.png"
+        src="/images/brand/logo-mark-v2.png"
         alt=""
         width={480}
         height={331}
@@ -28,7 +28,7 @@ export function Brand({
           .dark-surface sections (e.g. the navbar) get the white "Temms",
           everything else gets the ink-dark "Temms". */}
       <Image
-        src="/images/brand/logo-wordmark-on-light.png"
+        src="/images/brand/logo-wordmark-on-light-v2.png"
         alt="TemmsTech"
         width={900}
         height={289}
@@ -36,7 +36,7 @@ export function Brand({
         className="h-8 w-auto [.dark-surface_&]:hidden"
       />
       <Image
-        src="/images/brand/logo-wordmark-on-dark.png"
+        src="/images/brand/logo-wordmark-on-dark-v2.png"
         alt="TemmsTech"
         width={900}
         height={289}

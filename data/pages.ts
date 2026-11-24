@@ -1,6 +1,7 @@
 import type { PageIntroContent } from "@/types/page";
 import { services } from "@/data/services";
 import { processSteps } from "@/data/approach";
+import { capabilityHeroSlides } from "@/data/hero-slides";
 
 export const pageIntros = {
   capabilities: {
@@ -146,20 +147,40 @@ export const collaborationNotes = [
   },
 ];
 
+// Each card keeps its original photo first, then three more that fit its theme.
+// Every photo is already used elsewhere on the site, so nothing new is fetched.
 export const briefPrompts = [
   {
     title: "The situation",
     image: processSteps[1].image,
+    images: [
+      processSteps[1].image,
+      services[5].image,
+      processSteps[5].image,
+      capabilityHeroSlides.digital[1],
+    ],
     description: "What needs to work better, and where is it getting in the way today?",
   },
   {
     title: "The people",
     image: processSteps[0].image,
+    images: [
+      processSteps[0].image,
+      services[4].image,
+      processSteps[2].image,
+      processSteps[3].image,
+    ],
     description: "Who will use it, who is affected, and who needs to be involved?",
   },
   {
     title: "The practical details",
     image: services[0].image,
+    images: [
+      services[0].image,
+      services[1].image,
+      capabilityHeroSlides.digital[2],
+      capabilityHeroSlides.digital[3],
+    ],
     description: "Useful links, timing, and a budget range if you have one.",
   },
 ];

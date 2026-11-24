@@ -124,7 +124,7 @@ export function BriefReveal({
       id={id}
       className={cn(
         brand ? "bg-brand text-ink" : "bg-secondary",
-        fill && "flex min-h-[calc(100dvh-4.125rem)] items-center",
+        fill && "fill-below-nav flex min-h-[calc(100dvh-4.125rem)] items-center",
       )}
       aria-labelledby={`${id}-title`}
     >

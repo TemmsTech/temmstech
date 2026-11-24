@@ -6,7 +6,8 @@ export function useShowcasePlayback(
   ref: RefObject<HTMLElement | null>,
   enabled: boolean,
   count: number,
-  delay: number,
+  /** Milliseconds per item, or a function of the open item's index. Keep a function's identity stable. */
+  delay: number | ((index: number) => number),
 ) {
   const [index, setIndex] = useState(0);
 
@@ -15,12 +16,13 @@ export function useShowcasePlayback(
     if (!element || !enabled || count < 2) return;
     let visible = false;
     let timer: ReturnType<typeof setInterval> | undefined;
+    const wait = typeof delay === "function" ? delay(index) : delay;
     function sync() {
       clearInterval(timer);
       if (visible && !document.hidden)
         timer = setInterval(
           () => setIndex((value) => (value + 1) % count),
-          delay,
+          wait,
         );
     }
     const observer = new IntersectionObserver(

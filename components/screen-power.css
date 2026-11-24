@@ -1,0 +1,310 @@
+/* Lock, sleep, shut down and restart on the laptop's desktop (lib/screen-power.ts).
+   One layer above every window and the Start menu. Only transforms and opacity animate. */
+
+.screen-power {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  color: #fff;
+  font: 14px/1.25 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  outline: 0;
+  cursor: default;
+  /* The screen's root lets presses through, so this layer takes them back itself. */
+  pointer-events: auto;
+}
+.screen-power[data-view="none"] {
+  pointer-events: none;
+}
+.pw-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 350ms var(--ease-out),
+    transform 450ms var(--ease-out),
+    visibility 0s linear 350ms;
+}
+.pw-wall {
+  background: #06101f url("/images/desktop/wallpaper.jpg") right center / cover no-repeat;
+}
+.pw-dim {
+  background: rgb(6 16 31 / 0.55);
+}
+.pw-blue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #0a3d7a;
+  font-size: 20px;
+}
+.pw-black {
+  background: #000;
+}
+.pw-boot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 54px;
+  background: transparent;
+}
+.pw-logo {
+  display: block;
+  width: 84px;
+  height: 84px;
+}
+
+.screen-power[data-view="lock"] :is(.pw-wall, .pw-lock),
+.screen-power[data-view="signin"] :is(.pw-wall, .pw-dim, .pw-signin),
+.screen-power[data-view="wait"] .pw-blue,
+.screen-power[data-view="black"] .pw-black,
+.screen-power[data-view="boot"] :is(.pw-black, .pw-boot) {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 350ms var(--ease-out),
+    transform 450ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+
+/* Lock screen: big clock top left, like Windows 11. */
+.pw-lock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 90px;
+}
+.pw-time {
+  font-size: 96px;
+  font-weight: 300;
+  line-height: 1;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.35);
+}
+.pw-date {
+  margin-top: 10px;
+  font-size: 22px;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+}
+.pw-hint {
+  position: absolute;
+  bottom: 70px;
+  color: rgb(255 255 255 / 0.75);
+  font-size: 13px;
+}
+.screen-power:not([data-view="lock"]) .pw-lock {
+  transform: translateY(-40px);
+}
+
+/* Sign-in: avatar, name and a button. */
+.pw-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transform: translateY(0);
+}
+.screen-power:not([data-view="signin"]) .pw-signin {
+  transform: translateY(24px);
+}
+.pw-avatar {
+  display: grid;
+  width: 112px;
+  height: 112px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3aa0ff, #7b5cf0);
+  font-size: 46px;
+  font-weight: 600;
+}
+.pw-name {
+  font-size: 24px;
+  font-weight: 600;
+}
+.pw-signin-button {
+  min-width: 120px;
+  height: 34px;
+  margin-top: 8px;
+  padding: 0 18px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.14);
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+.pw-signin-button:hover,
+.pw-signin-button:focus-visible {
+  background: rgb(255 255 255 / 0.22);
+  outline: 0;
+}
+
+/* The spinner: a ring that turns. */
+.pw-spinner {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgb(255 255 255 / 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pw-spin 900ms linear infinite;
+}
+@keyframes pw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-spinner {
+    animation: none;
+  }
+}
+
+.pw-tip {
+  color: rgb(255 255 255 / 0.65);
+  font-size: 12px;
+}
+
+/* The click-to-wake button covers the screen on the lock and black screens only. */
+.pw-wake {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.screen-power:not([data-view="lock"], [data-view="black"]) .pw-wake {
+  pointer-events: none;
+}
+
+/* The password box: dots as keys are typed (the page hears the keys, not a text box). */
+.pw-field {
+  display: flex;
+  width: 220px;
+  height: 34px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-bottom: 2px solid #3aa0ff;
+  border-radius: 6px;
+  background: rgb(20 26 38 / 0.8);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.pw-field[data-empty="true"] {
+  color: rgb(255 255 255 / 0.55);
+  letter-spacing: 0;
+}
+.pw-problem {
+  min-height: 16px;
+  color: #ffb4b4;
+  font-size: 12px;
+}
+.pw-signin-button {
+  margin-top: 0;
+}
+.pw-signin[data-shake] .pw-field {
+  animation: pw-shake 360ms var(--ease-out);
+}
+@keyframes pw-shake {
+  20% {
+    transform: translateX(-8px);
+  }
+  50% {
+    transform: translateX(7px);
+  }
+  80% {
+    transform: translateX(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-signin[data-shake] .pw-field {
+    animation: none;
+  }
+}
+
+/* Sign-in area: the form, or (after a correct password) spinning dots in the same place. */
+.pw-actions {
+  display: grid;
+  justify-items: center;
+}
+.pw-actions > * {
+  grid-area: 1 / 1;
+}
+.pw-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transition: opacity 200ms var(--ease-out);
+}
+.pw-busy {
+  display: flex;
+  justify-content: center;
+  align-self: start;
+  padding-top: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-out) 80ms;
+}
+.pw-signin[data-busy] .pw-form {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    visibility 0s linear 200ms;
+}
+.pw-signin[data-busy] .pw-busy {
+  opacity: 1;
+}
+/* Five dots chasing each other round a circle, like the Windows sign-in. */
+.pw-dots {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+.pw-dot {
+  position: absolute;
+  inset: 0;
+  animation: pw-orbit 1.8s cubic-bezier(0.4, 0.1, 0.6, 0.9) infinite;
+}
+.pw-dot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #fff;
+}
+.pw-dot:nth-child(2) {
+  animation-delay: -220ms;
+}
+.pw-dot:nth-child(3) {
+  animation-delay: -440ms;
+}
+.pw-dot:nth-child(4) {
+  animation-delay: -660ms;
+}
+.pw-dot:nth-child(5) {
+  animation-delay: -880ms;
+}
+@keyframes pw-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-dot {
+    animation: none;
+  }
+}

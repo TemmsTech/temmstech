@@ -184,17 +184,42 @@
     min-height: 2.08em;
     font-size: clamp(1.9rem, 4vw, 4.25rem);
     white-space: nowrap;
+    perspective: 700px;
   }
+  /* Split-flap headline: one inline-block per character, flipped on its hinge. */
+  .hero-cell {
+    display: inline-block;
+    white-space: pre;
+    transform-origin: 50% 55%;
+  }
+  .hero-cell-flip {
+    animation: hero-flip 90ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  /* Paragraphs stack in one grid cell and dissolve through a blur. */
   .hero-description {
     display: grid;
     position: relative;
   }
   .hero-description > span {
     grid-area: 1 / 1;
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(8px);
+    pointer-events: none;
+    user-select: none;
+    transition:
+      opacity 450ms ease,
+      filter 450ms ease,
+      transform 450ms ease;
   }
-  .hero-description > span:first-child {
-    position: absolute;
-    inset: 0;
+  .hero-description > span[data-active="true"] {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    pointer-events: auto;
+    user-select: auto;
+    transition-duration: 850ms;
+    transition-delay: 200ms;
   }
   .section-title {
     @apply text-section font-medium;
@@ -261,8 +286,8 @@
   }
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .image-card:hover {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .image-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--card-shadow-raised);
   }
@@ -310,8 +335,8 @@
   transform: rotate(-3deg);
   transition: transform 250ms var(--default-transition-timing-function);
 }
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .project-preview:hover > div {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .project-preview:hover > div {
     transform: rotate(0deg) translateY(-3px);
   }
 }
@@ -518,18 +543,144 @@
   align-content: center;
 }
 .device-stage {
-  height: clamp(18rem, 27vw, 24rem);
+  /* Extra room added below the original frame; the camera is untouched. */
+  --stage-extra: 0rem;
+  /* Room added above and below the frame without moving the page layout
+     (negative margins cancel it out) or the model (the camera view shifts). */
+  --stage-top: 0rem;
+  --stage-bottom: 0rem;
+  --stage-grow: calc(var(--stage-extra) + var(--stage-top) + var(--stage-bottom));
+  box-sizing: border-box;
+  padding-top: var(--stage-top);
+  padding-bottom: calc(var(--stage-extra) + var(--stage-bottom));
+  margin-top: calc(var(--stage-top) * -1);
+  margin-bottom: calc(var(--stage-bottom) * -1);
+  height: calc(clamp(18rem, 27vw, 24rem) + var(--stage-grow));
   background: radial-gradient(ellipse at 50% 55%, #03b2fa0b, transparent 65%);
 }
 @media (min-width: 768px) and (orientation: portrait) {
   .device-stage {
-    height: clamp(22rem, 36svh, 40rem);
+    height: calc(clamp(22rem, 36svh, 40rem) + var(--stage-grow));
+  }
+}
+@media (min-width: 768px) {
+  .device-stage {
+    --stage-extra: 6rem;
+    --stage-top: 3.5rem;
+    --stage-bottom: 3rem;
   }
 }
 @media (min-width: 1024px) {
   .device-showcase-wide {
     width: calc(100% + max(3rem, (100vw - 80rem) / 2));
   }
+}
+/* Same look as the "Turn it into a cube" button on the capabilities page:
+   icon, bold label, thin underline. A real button: it zooms the laptop into
+   interact mode (components/device-showcase.tsx). Centred below the laptop and
+   absolute, so the stage keeps its size. It sits outside the stage, so its
+   bottom is lowered by the stage's own 3rem bottom overhang. Phones and
+   tablets go without. */
+.device-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(0.65rem - 3rem);
+  transform: translateX(-50%);
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  min-height: 2.75rem;
+  max-width: 92%;
+  width: max-content;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+.device-hint:focus-visible,
+.device-close:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 4px;
+}
+@media (max-width: 767px) {
+  .device-hint {
+    display: none;
+  }
+}
+/* Interact mode. The hero rises above the sticky navbar (z-40) so the backdrop
+   dims it too; the host itself is placed by lib/device-zoom.ts (z 2), under
+   the Close button (z 3). */
+.hero-stage[data-interact] {
+  z-index: 60;
+}
+.device-backdrop {
+  --zoom-ms: 520ms;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  /* Near-black, a little lighter behind the laptop so it is the one thing in focus. */
+  background: radial-gradient(ellipse 65% 60% at 50% 52%, rgb(2 7 16 / 0.93), rgb(0 2 6 / 0.98));
+  animation: device-backdrop-in var(--zoom-ms) var(--ease-out) both;
+}
+.device-backdrop[data-state="closing"] {
+  animation-name: device-backdrop-out;
+}
+@keyframes device-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes device-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .device-backdrop {
+    animation: none;
+  }
+}
+.device-close {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: 1.25rem;
+  z-index: 3;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 0.375rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  /* Solid, so the Let’s talk button underneath never shows through. */
+  background: #16202f;
+  cursor: pointer;
+}
+.device-close:hover {
+  background: #212f45;
+}
+.device-stage [data-dragging] {
+  cursor: grabbing;
+}
+.device-stage canvas {
+  cursor: grab;
+}
+.device-stage [data-dragging] canvas {
+  cursor: grabbing;
 }
 .device-stage canvas {
   display: block;
@@ -837,12 +988,89 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
     animation: work-fan-fade 300ms ease backwards;
   }
 }
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .work-fan-card:hover {
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root[data-pointer="fine"]) .work-fan-card:hover {
     transform: var(--lift);
     box-shadow: var(--card-shadow-raised);
     z-index: 20;
     animation-play-state: running, paused;
+  }
+}
+
+/* Contact hero wall of work: every tile starts as a small dot, then the dots open
+   into the full grid one after another. Plain CSS, so it plays on first paint. */
+@keyframes wall-tile-open {
+  from {
+    clip-path: inset(calc(50% - 5px) round 999px);
+    scale: 0.5;
+  }
+  to {
+    clip-path: inset(0 round 0);
+    scale: 1;
+  }
+}
+@keyframes wall-tile-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-wall-tile {
+    animation: wall-tile-open 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation-delay: calc(350ms + var(--i) * 45ms);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-wall-tile {
+    animation: wall-tile-fade 300ms ease backwards;
+  }
+}
+
+/* Loading state for a live site frame: a soft sheen sweeps across while the
+   site opens, then the placeholder fades away as the site fades in. */
+@keyframes live-frame-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.live-frame-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity 400ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 400ms;
+}
+.live-frame-loading[data-loaded] {
+  opacity: 0;
+  visibility: hidden;
+}
+/* A simulated reload covers the already-loaded site with an opaque placeholder. */
+.live-frame-loading[data-reload] {
+  background: var(--ink);
+}
+.live-frame-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.1) 50%,
+    transparent 70%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-frame-sheen {
+    animation: live-frame-sheen 1400ms linear infinite;
   }
 }
 
@@ -1049,43 +1277,27 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
     transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
     box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-@media (hover: hover) and (pointer: fine) {
-  .glass-lift:hover,
-  .glass-lift:focus-within {
-    transform: translateY(-6px);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.14),
-      inset 0 -1px 0 rgb(0 0 0 / 0.35),
-      0 2px 2px #0000001f,
-      0 6px 12px #07111f2e,
-      0 20px 40px #07111f40,
-      0 44px 80px #07111f4d,
-      0 80px 140px #07111f59;
-  }
+:where(:root[data-pointer="fine"]) .glass-lift:hover,
+:where(:root[data-pointer="fine"]) .glass-lift:focus-within {
+  transform: translateY(-6px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 2px 2px #0000001f,
+    0 6px 12px #07111f2e,
+    0 20px 40px #07111f40,
+    0 44px 80px #07111f4d,
+    0 80px 140px #07111f59;
 }
-.glass-close {
+/* Close button: the red look and press-in come from the shared .btn styles.
+   This only places it in the panel's top-right corner. It is written as
+   `.glass-panel > .glass-close` so it outranks `.btn`, which is also
+   `position: relative` (for its hover pulse) and would otherwise win. */
+.glass-panel > .glass-close {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  cursor: pointer;
-  place-items: center;
-  border: 1px solid rgb(248 113 113 / 0.4);
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.06);
-  color: #f87171;
-  transition:
-    background-color 150ms,
-    border-color 150ms,
-    color 150ms;
-}
-.glass-close:hover,
-.glass-close:active {
-  border-color: #dc2626;
-  background: #dc2626;
-  color: #fff;
+  border-radius: 9999px;
 }
 
 /* Contact reveal: the form slides in from the right when the section opens. */
@@ -1165,10 +1377,8 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   .btn:where(:not(:disabled)) {
     cursor: pointer;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .btn:where(:not(:disabled)):hover {
-      filter: brightness(1.07);
-    }
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover {
+    filter: brightness(1.07);
   }
   .btn:where(:not(:disabled)):active {
     transform: translateY(1px) scale(0.985);
@@ -1358,38 +1568,849 @@ body:has(.site-navbar[data-hidden="false"]) .section-nav {
   --btn-pulse: var(--brand);
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   /* Arrows keep nudging forward and back for as long as their button, link or
      summary is hovered. Uses `transform`, which applies after an arrow's own
      `rotate`, so rotated arrows (down, up) move the way they point. */
-  :is(a, button, summary):where(:not(:disabled)):hover [data-arrow] {
+  :where(:root[data-pointer="fine"]) :is(a, button, summary):where(:not(:disabled)):hover [data-arrow] {
     animation: arrow-nudge 800ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
   }
-  .btn:where(:not(:disabled)):hover::after {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover::after {
     animation: btn-pulse 900ms cubic-bezier(0.23, 1, 0.32, 1) infinite;
   }
-  .btn-destructive:where(:not(:disabled)):hover::after {
+  :where(:root[data-pointer="fine"]) .btn-destructive:where(:not(:disabled)):hover::after {
     animation: none;
   }
-  .btn-destructive:where(:not(:disabled)):hover,
-  .glass-close:hover {
+  :where(:root[data-pointer="fine"]) .btn-destructive:where(:not(:disabled)):hover,
+  :where(:root[data-pointer="fine"]) .glass-close:hover {
     animation: btn-shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   }
   /* Icon-only buttons (menu toggle) have no label to pulse around: wiggle the glyph. */
-  .btn:where(:not(:disabled)):hover > svg:only-child:not([data-arrow]) {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover > svg:only-child:not([data-arrow]) {
     animation: btn-wiggle 500ms ease-in-out;
   }
-  .btn:where(:not(:disabled)):hover:has(> svg:only-child:not([data-arrow]))::after {
+  :where(:root[data-pointer="fine"]) .btn:where(:not(:disabled)):hover:has(> svg:only-child:not([data-arrow]))::after {
     animation: none;
   }
-  .glass-chip:hover {
+  :where(:root[data-pointer="fine"]) .glass-chip:hover {
     translate: 0 -2px;
   }
-  .glass-chip.btn {
+  :where(:root[data-pointer="fine"]) .glass-chip.btn {
     transition:
       transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
       translate 180ms cubic-bezier(0.23, 1, 0.32, 1),
       box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1),
       filter 160ms ease-out;
+  }
+}
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Browser window pinned to the hero laptop's screen (lib/screen-browser.ts).
+   Laid out at 1280x740 and mapped onto the model display with matrix3d. */
+.screen-browser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: 0 0;
+  /* The screen itself catches the mouse, so its empty parts show the normal arrow
+     instead of the 3D canvas's grab hand underneath; clickable parts set their own cursor. */
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+  color: var(--foreground);
+  background: var(--ink);
+  will-change: transform;
+}
+.screen-browser[hidden] {
+  display: none;
+}
+.screen-browser[data-instant] * {
+  transition: none !important;
+}
+.screen-browser-tabs {
+  --window-controls: 156px;
+  /* Room kept after the last tab for the + button. */
+  --tab-add: 48px;
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 56px;
+  padding: 10px var(--window-controls) 0 14px;
+  background: var(--ink);
+}
+/* Minimise / maximise / close, flush with the top right corner. */
+.screen-browser-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  pointer-events: none;
+}
+.screen-browser-control {
+  display: grid;
+  width: 52px;
+  height: 100%;
+  place-items: center;
+  color: var(--foreground);
+}
+.screen-browser-pill {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 14px;
+  border-radius: 12px 12px 0 0;
+  background: var(--card);
+  transition: transform 300ms var(--ease-out);
+}
+.screen-browser-tabs,
+.screen-browser-shield {
+  pointer-events: auto;
+}
+.screen-browser-tab {
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  transition: color 200ms var(--ease-out);
+}
+.screen-browser-tab[data-active="true"] {
+  color: var(--foreground);
+}
+.screen-browser-tab[hidden] {
+  display: none;
+}
+/* Closes one tab: always on the open tab, on the others while a mouse is over them. */
+.screen-browser button.screen-browser-tab-close {
+  display: grid;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms var(--ease-out),
+    background-color 150ms var(--ease-out);
+}
+.screen-browser-tab-close svg {
+  width: 14px;
+  height: 14px;
+}
+.screen-browser-tab[data-active="true"] .screen-browser-tab-close,
+:where(:root[data-pointer="fine"]) .screen-browser-tab:hover .screen-browser-tab-close {
+  opacity: 1;
+}
+.screen-browser button.screen-browser-tab-close:hover {
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+/* With many tabs open the strip drops the icons to give the titles room. */
+.screen-browser-tabs[data-dense] .screen-browser-tab {
+  gap: 6px;
+  padding: 0 8px;
+}
+.screen-browser-tabs[data-dense] .screen-browser-tab-icon {
+  display: none;
+}
+/* Opens a new tab: sits after the last tab. */
+.screen-browser button.screen-browser-tab-add {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  padding: 0;
+  place-items: center;
+  align-self: center;
+  border: 0;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.screen-browser button.screen-browser-tab-add:hover:not(:disabled) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.screen-browser button.screen-browser-tab-add:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.screen-browser-tab-icon {
+  display: grid;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--brand);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.screen-browser-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-browser-bar {
+  position: relative;
+  /* Above the page, so the address bar's hint is never covered by it. */
+  z-index: 3;
+  display: flex;
+  flex: none;
+  height: 60px;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  background: var(--card);
+}
+.screen-browser-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.screen-browser-nav-btn {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.screen-browser-nav-btn:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--foreground);
+}
+.screen-browser-nav-btn:active {
+  background: rgb(255 255 255 / 0.14);
+}
+.screen-browser-address {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 19px;
+  background: var(--ink);
+  font-size: 20px;
+  white-space: nowrap;
+}
+.screen-browser-scheme {
+  color: var(--muted-foreground);
+}
+.screen-browser-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The address bar is a real text field on the laptop and tablet. */
+.screen-browser input.screen-browser-url {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: text;
+  user-select: text;
+}
+.screen-browser input.screen-browser-url::placeholder {
+  color: var(--muted-foreground);
+}
+.screen-browser-address:focus-within {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.screen-browser-address[data-invalid] {
+  box-shadow: inset 0 0 0 2px var(--destructive);
+}
+.screen-browser-address[data-invalid]::after {
+  content: attr(data-invalid);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 8px 16px;
+  border: 2px solid var(--destructive);
+  border-radius: 12px;
+  font-size: 18px;
+  color: var(--foreground);
+  background: var(--card);
+  pointer-events: none;
+}
+/* Opens a page the visitor typed in as a real browser tab, for sites that refuse to be framed. */
+.screen-browser button.screen-browser-external {
+  flex: none;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 19px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font: inherit;
+  font-size: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+.screen-browser button.screen-browser-external:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.screen-browser button.screen-browser-external[hidden] {
+  display: none;
+}
+.screen-browser-load {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-browser-load[data-run] {
+  animation: screen-browser-load 900ms var(--ease-out) both;
+}
+@keyframes screen-browser-load {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  75% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+.screen-browser-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ink);
+}
+.screen-browser-page .live-frame-loading {
+  pointer-events: none;
+}
+/* The page of a tab the visitor opened, before an address is typed. */
+.screen-browser-newtab {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 14px;
+  place-content: center;
+  text-align: center;
+  background: var(--ink);
+  pointer-events: none;
+}
+.screen-browser-newtab-title {
+  font-size: 40px;
+  color: var(--foreground);
+}
+.screen-browser-newtab-hint {
+  font-size: 22px;
+  color: var(--muted-foreground);
+}
+.screen-browser[data-engaged] .screen-browser-stage {
+  pointer-events: auto;
+}
+.screen-browser-shield {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+.screen-browser[data-engaged] .screen-browser-shield {
+  pointer-events: none;
+}
+.screen-browser-shield::after {
+  content: "Click to interact";
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 20px;
+  white-space: nowrap;
+  color: #fff;
+  background: rgb(7 17 31 / 0.82);
+  border: 2px solid rgb(255 255 255 / 0.18);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.screen-browser-shield:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.screen-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  margin: -3px 0 0 -5px;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.45));
+  transition:
+    transform 1100ms cubic-bezier(0.45, 0.05, 0.2, 1),
+    opacity 250ms var(--ease-out);
+}
+.screen-cursor[data-show="true"] {
+  opacity: 1;
+}
+.screen-cursor svg {
+  transition: transform 120ms var(--ease-out);
+  transform-origin: 15% 10%;
+}
+.screen-cursor[data-press="true"] svg {
+  transform: scale(0.8);
+}
+.screen-cursor-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border: 3px solid var(--brand);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+}
+.screen-cursor-ripple[data-run] {
+  animation: screen-cursor-ripple 520ms var(--ease-out) both;
+}
+@keyframes screen-cursor-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+.screen-browser-page {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateX(40px);
+  transition:
+    opacity 300ms var(--ease-out),
+    transform 300ms var(--ease-out);
+}
+.screen-browser-page[data-state="active"] {
+  z-index: 2;
+  opacity: 1;
+  transform: none;
+}
+.screen-browser-page[data-state="leaving"] {
+  z-index: 1;
+  opacity: 0;
+  transform: translateX(-40px);
+}
+.screen-browser-page iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.screen-browser-page iframe[data-loaded] {
+  opacity: 1;
+}
+
+/* Miniature video player: opens over the screen, plays once, then minimises
+   to a chip in the same corner. Laid out in the device's own pixels. */
+.screen-player-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.screen-player-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(7 17 31 / 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms var(--ease-out);
+}
+.screen-player-layer[data-state="open"] .screen-player-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* One window, three poses: big and centred (open), small in the corner (mini),
+   and shrunk away into the chip (docked). */
+.screen-player {
+  --mini-w: 380px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0;
+  color: #fff;
+  background: var(--ink);
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transform-origin: 100% 100%;
+  transform: translate(-50%, -50%) scale(0.98);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    left 520ms var(--ease-out),
+    top 520ms var(--ease-out),
+    width 520ms var(--ease-out),
+    height 520ms var(--ease-out),
+    border-radius 520ms var(--ease-out),
+    box-shadow 520ms var(--ease-out),
+    outline-color 520ms var(--ease-out),
+    opacity 360ms var(--ease-out),
+    transform 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="open"] .screen-player {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+/* Small pose: bar 42px + video 16:9 + controls 56px. */
+.screen-player-layer[data-state="mini"] .screen-player,
+.screen-player-layer[data-state="docked"] .screen-player {
+  left: calc(100% - 28px);
+  top: calc(100% - 28px);
+  width: var(--mini-w);
+  height: calc(var(--mini-w) * 9 / 16 + 98px);
+  border-radius: 18px;
+  outline-color: rgb(255 255 255 / 0.14);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+  transform: translate(-100%, -100%);
+  opacity: 1;
+  pointer-events: auto;
+}
+.screen-player-layer[data-state="docked"] .screen-player {
+  opacity: 0;
+  transform: translate(-100%, -100%) scale(0.2);
+  pointer-events: none;
+}
+/* Same height and corner controls as the browser's tab strip when full screen. */
+.screen-player-bar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  padding: 0 0 0 20px;
+  background: var(--ink);
+  transition:
+    height 520ms var(--ease-out),
+    padding 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="mini"] .screen-player-bar,
+.screen-player-layer[data-state="docked"] .screen-player-bar {
+  height: 42px;
+  padding-left: 14px;
+}
+.screen-player-title {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: font-size 520ms var(--ease-out);
+}
+.screen-player-layer[data-state="mini"] .screen-player-title,
+.screen-player-layer[data-state="docked"] .screen-player-title {
+  font-size: 17px;
+}
+.screen-player-wincontrols {
+  display: flex;
+  flex: none;
+}
+.screen-player .screen-player-win {
+  width: 52px;
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  color: var(--foreground);
+  transition:
+    background-color 150ms ease,
+    width 520ms var(--ease-out);
+}
+.screen-player .screen-player-win svg {
+  width: 18px;
+  height: 18px;
+}
+.screen-player-layer[data-state="mini"] .screen-player .screen-player-win,
+.screen-player-layer[data-state="docked"] .screen-player .screen-player-win {
+  width: 40px;
+}
+.screen-player .screen-player-win:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.screen-player .screen-player-win[data-action="close"]:hover {
+  background: #e81123;
+}
+.screen-player .screen-player-win:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.screen-player .screen-player-win:disabled:hover {
+  background: transparent;
+}
+.screen-player-video {
+  display: block;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.screen-player-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+.screen-player button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 6px;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.screen-player button:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+.screen-player button:focus-visible,
+.screen-player-dock:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.screen-player .screen-player-play {
+  color: var(--ink);
+  background: var(--brand);
+}
+.screen-player .screen-player-play:hover {
+  background: color-mix(in srgb, var(--brand) 82%, #fff);
+}
+.screen-player-play .icon-pause,
+.screen-player-play[data-playing="true"] .icon-play {
+  display: none;
+}
+.screen-player-play[data-playing="true"] .icon-pause {
+  display: block;
+}
+.screen-player-mute[data-muted="true"] .icon-on,
+.screen-player-mute[data-muted="false"] .icon-off {
+  display: none;
+}
+.screen-player-play span,
+.screen-player-mute span,
+.screen-player-dock-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.screen-player-track {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  margin: 0 6px;
+  cursor: pointer;
+  touch-action: none;
+}
+.screen-player-rail {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.22);
+  pointer-events: none;
+}
+.screen-player-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.screen-player-dock {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 20px 0 10px;
+  border: 2px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  color: #fff;
+  background: #0b1626;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.4);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px) scale(0.9);
+  transform-origin: 100% 100%;
+  pointer-events: none;
+  transition:
+    opacity 250ms var(--ease-out) 120ms,
+    transform 250ms var(--ease-out) 120ms;
+}
+.screen-player-layer[data-state="docked"] .screen-player-dock {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.screen-player-dock-icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--brand);
+}
+.screen-player-dock-label {
+  white-space: nowrap;
+}
+.screen-browser[data-kind="phone"] .screen-player {
+  --mini-w: 262px;
+}
+.screen-browser[data-kind="phone"]
+  .screen-player-layer:is([data-state="mini"], [data-state="docked"])
+  .screen-player {
+  left: calc(100% - 14px);
+  top: calc(100% - 18px);
+  border-radius: 14px;
+}
+.screen-browser[data-kind="phone"] .screen-player-dock {
+  right: 14px;
+  bottom: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-browser * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.screen-browser-loading-title {
+  position: relative;
+  font-size: 28px;
+  color: var(--muted-foreground);
+}
+.screen-browser[data-kind="phone"] {
+  border-radius: 18px;
+}
+.screen-browser-status {
+  flex: none;
+  height: 54px;
+  background: var(--card);
+}
+.screen-browser[data-kind="phone"] .screen-browser-bar {
+  height: 56px;
+  padding: 0 16px;
+}
+.screen-browser[data-kind="phone"] .screen-browser-address {
+  justify-content: center;
+  font-size: 19px;
+}
+
+@keyframes hero-flip {
+  from {
+    transform: rotateX(-85deg);
+    opacity: 0.25;
+  }
+  to {
+    transform: rotateX(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cell-flip {
+    animation: none;
+  }
+  .hero-description > span,
+  .hero-description > span[data-active="true"] {
+    transition: none;
   }
 }

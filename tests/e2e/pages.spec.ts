@@ -32,7 +32,7 @@ test("work separates supplied websites from sample concepts", async ({
 }) => {
   await page.goto("/work");
   const work = page.locator("#work");
-  await expect(work.getByRole("article")).toHaveCount(6);
+  await expect(work.getByRole("article")).toHaveCount(8);
   for (const [name, url] of [
     ["Don Elclasico Wears", "https://donelclasico.netlify.app"],
     ["Santy Stitches", "https://santystitches.netlify.app"],
@@ -40,6 +40,8 @@ test("work separates supplied websites from sample concepts", async ({
     ["NaijaLearn", "https://naijalearn.netlify.app/"],
     ["Makinde Bibitayo", "https://makindebibitayo.netlify.app/"],
     ["MOG", "https://mog-nine.vercel.app/"],
+    ["CMWG Travel", "https://cmwgtours.netlify.app"],
+    ["Proximity News", "https://proximitynews.netlify.app"],
   ]) {
     const link = work.getByRole("link", {
       name: `Visit ${name} website (opens in a new tab)`,
@@ -59,11 +61,11 @@ test("homepage reveals previous work in batches of four", async ({ page }) => {
   await expect(work.getByRole("article")).toHaveCount(4);
   await expect(work.getByRole("article").first()).toContainText("MOG");
   await expect(
-    work.getByRole("img", { name: "Makinde Bibitayo website preview" }),
+    work.getByRole("article").filter({ hasText: "Makinde Bibitayo" }),
   ).toHaveCount(0);
   await work.getByRole("button", { name: "Show more", exact: true }).click();
-  await expect(work.getByRole("article")).toHaveCount(6);
-  await expect(work.getByRole("status")).toHaveText("Showing 6 of 6 projects.");
+  await expect(work.getByRole("article")).toHaveCount(8);
+  await expect(work.getByRole("status")).toHaveText("Showing 8 of 8 projects.");
   await expect(
     work.getByRole("link", {
       name: "Visit NaijaLearn website (opens in a new tab)",

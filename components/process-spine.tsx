@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "@/hooks";
 import type { ProcessStep } from "@/types/content";
 
 type SpineStep = Pick<ProcessStep, "title" | "description">;
@@ -15,15 +16,14 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 export function ProcessSpine({ steps }: { steps: readonly SpineStep[] }) {
   const listRef = useRef<HTMLOListElement>(null);
   const [lit, setLit] = useState(0);
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  // Reduced motion shows every step lit and skips the scroll tracking.
+  const shown = reduced ? steps.length : lit;
 
   useEffect(() => {
     const list = listRef.current;
-    if (!list) return;
+    if (!list || reduced) return;
     const total = steps.length;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setLit(total);
-      return;
-    }
     let frame = 0;
     const update = () => {
       frame = 0;
@@ -47,7 +47,7 @@ export function ProcessSpine({ steps }: { steps: readonly SpineStep[] }) {
       window.removeEventListener("resize", schedule);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [steps.length]);
+  }, [steps.length, reduced]);
 
   return (
     <ol ref={listRef} className="spine">
@@ -55,8 +55,8 @@ export function ProcessSpine({ steps }: { steps: readonly SpineStep[] }) {
         <li
           key={step.title}
           className="spine-step"
-          data-lit={index < lit ? "" : undefined}
-          data-next-lit={index + 1 < lit ? "" : undefined}
+          data-lit={index < shown ? "" : undefined}
+          data-next-lit={index + 1 < shown ? "" : undefined}
         >
           {index < steps.length - 1 && (
             <span className="spine-seg" aria-hidden="true">

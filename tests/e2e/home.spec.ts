@@ -43,7 +43,7 @@ test("homepage explains the company, shows its imagery, and reaches each section
   expect(errors).toEqual([]);
 });
 
-test("hero title and supporting copy scramble and settle", async ({ page }) => {
+test("hero title flips and supporting copy dissolves, then settles", async ({ page }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
@@ -56,7 +56,7 @@ test("hero title and supporting copy scramble and settle", async ({ page }) => {
     heading.locator('span[aria-hidden="true"]').first(),
   ).toContainText("Made to work.", { timeout: 20000 });
   await expect(
-    page.locator(".hero-description > span:first-child"),
+    page.locator('.hero-description > span[data-active="true"]'),
   ).toContainText("Across web platforms, mobile apps", { timeout: 20000 });
   await expect(
     heading.locator('span[aria-hidden="true"]').first(),
